@@ -12,7 +12,7 @@ import json
 # 1. إعدادات الصفحة والتنسيق الشكلي (Custom CSS)
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Enterprise AI Customer Support Suite",
+    page_title="RADDAD AI",
     page_icon="🤖",
     layout="wide"
 )
@@ -81,12 +81,12 @@ HIDDEN_SYSTEM_PROMPT = (
 # ---------------------------------------------------------
 # 4. الواجهة الرئيسية
 # ---------------------------------------------------------
-st.markdown("<div class='main-title'>🤖 Enterprise AI Customer Support</div>", unsafe_allow_html=True)
+st.markdown("<div class='main-title'>🤖 RADDAD AI </div>", unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>نظام خدمة العملاء المطور بالذكاء الاصطناعي</div>", unsafe_allow_html=True)
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "مرحباً بك! 👋 أنا مساعد خدمة العملاء الذكي. كيف يمكنني مساعدتك اليوم؟"}
+        {"role": "assistant", "content": " RADDAD AI مرحباً بك! 👋 أنا مساعد خدمة العملاء الذكي. كيف يمكنني مساعدتك اليوم؟"}
     ]
 
 # أزرار أسئلة سريعة
