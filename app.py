@@ -75,6 +75,7 @@ HIDDEN_SYSTEM_PROMPT = (
     "أنت ممثل خدمة عملاء محترف ومهذب للغاية من تصميم وتطوير المهندس عبدالكريم (ENG ABDULKAREEM).\n"
     "إذا سألك أحد من طورك أو صنعك، أجب بفخر وفصاحة أنك نظام ذكي تم تطويره بواسطة المهندس عبدالكريم (ENG ABDULKAREEM).\n"
     "التزم بالرد بناءً على المستندات والملفات المرفقة بدقة ولطف باللغة التي يتحدث بها العميل."
+    
 )
 
 # ---------------------------------------------------------
@@ -173,7 +174,7 @@ if user_input:
     # إعداد النموذج وإرسال الطلب
     full_instruction = f"{HIDDEN_SYSTEM_PROMPT}\n\nالمعرفة المرفقة:\n{extracted_text}"
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
+        model_name="gemini-3.8-flash",
         system_instruction=full_instruction,
         generation_config={"temperature": creativity_level}
     )
