@@ -1,119 +1,226 @@
 import streamlit as st
 import google.generativeai as genai
 from pypdf import PdfReader
+import pandas as pd
+import urllib.request
+from bs4 import BeautifulSoup
 import datetime
+import json
 
-# 1. إعدادات الصفحة والواجهة
+# ---------------------------------------------------------
+# 1. إعدادات الصفحة والتنسيق الشكلي (Custom CSS)
+# ---------------------------------------------------------
 st.set_page_config(
-    page_title="Smart Enterprise AI Chatbot",
+    page_title="Enterprise AI Customer Support Suite",
     page_icon="🤖",
     layout="wide"
 )
 
-# 2. إعداد مفتاح API الأمان عبر Streamlit Secrets أو شريط الجانب
+st.markdown("""
+    <style>
+    .main-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #1E88E5;
+        margin-bottom: 0px;
+    }
+    .sub-title {
+        font-size: 1rem;
+        color: #666;
+        margin-bottom: 20px;
+    }
+    .stButton>button {
+        border-radius: 8px;
+    }
+    .metric-card {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 8px;
+        border-right: 4px solid #1E88E5;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# 2. إعداد مفتاح API والأمان عبر Streamlit Secrets
+# ---------------------------------------------------------
 api_key = st.secrets.get("GEMINI_API_KEY", None)
 
 with st.sidebar:
-    st.title("⚙️ الإعدادات والمستندات")
-    
+    st.markdown("## ⚙️ إعدادات النظام")
     if not api_key:
-        api_key = st.text_input("أدخل مفتاح Gemini API الخاص بك:", type="password")
+        api_key = st.text_input("🔑 أدخل مفتاح Gemini API:", type="password")
         if not api_key:
-            st.warning("⚠️ يرجى إدخال مفتاح GEMINI_API_KEY للاستمرار.")
+            st.warning("⚠️ يرجى تزويد النظام بمفتاح API للبدء.")
             st.stop()
     else:
-        st.success("🔒 تم تفعيل مفتاح API بنجاح!")
-    
+        st.success("🔒 مفتاح API مفعل وآمن")
+
     st.markdown("---")
-    st.subheader("📄 رفع قاعدة المعرفة (PDF)")
+    
+    # ---------------------------------------------------------
+    # 3. إدارة قواعد المعرفة (PDF, TXT, CSV, URL)
+    # ---------------------------------------------------------
+    st.markdown("### 📚 قاعدة المعرفة (Knowledge Base)")
+    
     uploaded_files = st.file_uploader(
-        "ارفع ملفات PDF الخاصة بشركتك (كتالوجات، أسئلة شائعة، سياسات):",
-        type=["pdf"],
+        "ارفع المستندات (PDF, TXT, CSV):",
+        type=["pdf", "txt", "csv"],
         accept_multiple_files=True
     )
     
-    # استخراج النصوص من ملفات الـ PDF المرفوعة
-    pdf_text = ""
-    if uploaded_files:
-        with st.spinner("جاري قراءة وتحليل ملفات الـ PDF..."):
-            for uploaded_file in uploaded_files:
-                reader = PdfReader(uploaded_file)
-                for page in reader.pages:
-                    extracted = page.extract_text()
-                    if extracted:
-                        pdf_text += extracted + "\n"
-        st.success(f"✅ تم تحميل {len(uploaded_files)} ملف(ات) بنجاح!")
-
-    st.markdown("---")
-    st.subheader("🛠️ أدوات المحادثة")
+    website_url = st.text_input("🌐 أو أدخل رابط موقع إلكتروني:")
     
-    # زر إعادة ضبط المحادثة
-    if st.button("🗑️ مسح المحادثة والبدء من جديد", use_container_width=True):
-        st.session_state.messages = []
-        st.rerun()
+    knowledge_base_text = ""
+    
+    # قراءة الملفات المرفوعة
+    if uploaded_files:
+        progress_bar = st.progress(0)
+        total_files = len(uploaded_files)
+        for idx, file in enumerate(uploaded_files):
+            try:
+                if file.name.endswith(".pdf"):
+                    reader = PdfReader(file)
+                    for page in reader.pages:
+                        text = page.extract_text()
+                        if text:
+                            knowledge_base_text += text + "\n"
+                elif file.name.endswith(".txt"):
+                    knowledge_base_text += file.read().decode("utf-8") + "\n"
+                elif file.name.endswith(".csv"):
+                    df = pd.read_csv(file)
+                    knowledge_base_text += df.to_string() + "\n"
+            except Exception as e:
+                st.error(f"خطأ في قراءة الملف {file.name}: {e}")
+            progress_bar.progress((idx + 1) / total_files)
+        st.success(f"✅ تم تحليل {total_files} ملف(ات) بنجاح!")
 
-    # زر الدعم البشري
+    # قراءة رابط الموقع الإلكتروني
+    if website_url:
+        try:
+            with st.spinner("🌐 جاري سحب وتصنيف بيانات الموقع..."):
+                req = urllib.request.Request(
+                    website_url, 
+                    headers={'User-Agent': 'Mozilla/5.0'}
+                )
+                html = urllib.request.urlopen(req).read()
+                soup = BeautifulSoup(html, 'html.parser')
+                # استخراج النصوص من الفقرات والعناوين
+                for p in soup.find_all(['p', 'h1', 'h2', 'h3']):
+                    knowledge_base_text += p.get_text() + "\n"
+                st.success("✅ تم جلب محتوى الموقع بنجاح!")
+        except Exception as e:
+            st.error(f"تعذر جلب بيانات الموقع: {e}")
+
     st.markdown("---")
-    st.subheader("📞 الدعم الفني")
+    
+    # ---------------------------------------------------------
+    # 4. تخصيص شخصية البوت وإعدادات النموذج
+    # ---------------------------------------------------------
+    st.markdown("### 🎛️ تخصيص المساعد")
+    
+    creativity_level = st.slider(
+        "درجة الإبداع (Temperature):",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.3,
+        step=0.1,
+        help="قيم أصلح للإجابات الدقيقة والوثائق، وقيم أعلى للإجابات الإبداعية."
+    )
+    
+    custom_instructions = st.text_area(
+        "توجيهات النظام (System Prompt):",
+        value=(
+            "أنت ممثل خدمة عملاء محترف ومهذب للغاية من تصميم وتطوير المهندس عبدالكريم (ENG ABDULKAREEM).\n"
+            "إذا سألك أحد من طورك أو صنعك، أجب بفخر وفصاحة أنك نظام ذكي تم تطويره بواسطة المهندس عبدالكريم (ENG ABDULKAREEM).\n"
+            "التزم بالرد بناءً على قاعدة المعرفة المرفقة بدقة ولطف باللغة التي يتحدث بها العميل."
+        ),
+        height=120
+    )
+
+    st.markdown("---")
+    st.markdown("### 📞 الدعم الفني")
     st.markdown("[💬 تواصل مع الدعم البشري عبر واتساب](https://wa.me/0789944348)")
 
-# 3. إعداد نموذج Gemini
+# ---------------------------------------------------------
+# 5. تهيئة نموذج Gemini API
+# ---------------------------------------------------------
 genai.configure(api_key=api_key)
 
-# توجيه النظام (System Prompt) لضمان إجابات احترافية
-system_instruction = f"""
-أنت ممثل خدمة عملاء محترف وذكي جداً يعمل لدى شركة.
-وظيفتك الأساسية هي الإجابة على استفسارات العملاء بدقة وسرعة وأسلوب مهذب ولطيف.
+full_system_instruction = f"""
+{custom_instructions}
 
-قاعدة المعرفة المتاحة لديك من ملفات الشركة هي:
+قاعدة المعرفة المتاحة حالياً:
 ---
-{pdf_text if pdf_text else "لم يتم رفع ملفات PDF بعد. أجب بشكل عام ووجه العميل لرفع مستندات الشركة للحصول على تفاصيل أدق."}
+{knowledge_base_text if knowledge_base_text else "لا توجد مستندات مرفوعة حالياً. أجب بشكل عام ووجه العميل لرفع ملفات أو إدخال موقع."}
 ---
-
-قواعد العمل:
-1. التزم بالمعلومات المذكورة في قاعدة المعرفة المرفقة أعلاه قدر الإمكان.
-2. إذا لم تجد الإجابة في المستندات، أجب بأسلوب راقٍ واقترح على العميل التواصل مع الدعم البشري.
-3. أجب بنفس اللغة التي يتحدث بها العميل (عربي / إنجليزي).
-4. لا تخترع معلومات غير موجودة في المستندات، وكن صريحاً إذا لم تتوفر الإجابة.
-5. حافظ على أسلوب مهذب وودود في جميع الأوقات.
-6. قدم إجابات مختصرة وواضحة، وتجنب الإطالة غير الضرورية.
-7. إذا طلب العميل معلومات حساسة أو شخصية، وجهه للتواصل مع الدعم البشري مباشرة.
-8. إذا طلب العميل رفع مستندات، وجهه لرفع ملفات PDF عبر واجهة التطبيق.
-9. لا تستخدم أي لغة مسيئة أو مهينة، وكن محترفاً في جميع الأوقات.
-10.اداسالك العميل من صنعك او طورك تجيب "ENG ABDULKAREEM" فقط.
 """
 
 model = genai.GenerativeModel(
     model_name="gemini-3.8-flash",
-    system_instruction=system_instruction
+    system_instruction=full_system_instruction,
+    generation_config={"temperature": creativity_level}
 )
 
-# 4. إدارة سجل المحادثة
+# ---------------------------------------------------------
+# 6. الواجهة الرئيسية وإدارة جلسة المحادثة
+# ---------------------------------------------------------
+st.markdown("<div class='main-title'>🤖 Enterprise AI Customer Support</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-title'>نظام خدمة العملاء المطور بالذكاء الاصطناعي بدعم المستندات والمواقع</div>", unsafe_allow_html=True)
+
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "مرحباً بك! 👋 أنا مساعدك الذكي لخدمة العملاء. كيف يمكنني مساعدتك اليوم؟"}
+        {"role": "assistant", "content": "مرحباً بك! 👋 أنا مساعد خدمة العملاء الذكي. كيف يمكنني مساعدتك اليوم؟"}
     ]
 
-st.title("🤖 Smart Enterprise Customer Support AI")
-st.caption("مساعد الذكاء الاصطناعي التفاعلي المعتمد على مستندات الشركة وقواعد المعرفة")
+# إحصائيات سريعة في أعلى الشاشة
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("عدد الرسائل", len(st.session_state.messages))
+with col2:
+    st.metric("حالة القاعدة المعرفية", "مفعلة 📄" if knowledge_base_text else "عامة 🌐")
+with col3:
+    st.metric("النموذج النشط", "Gemini 1.5 Flash")
 
-# عرض المحادثات السابقة
-for message in st.session_state.messages:
+st.markdown("---")
+
+# أزرار أسئلة سريعة تفاعلية (Quick Prompts)
+st.markdown("**💡 أسئلة سريعة مقترحة:**")
+q_cols = st.columns(3)
+prompt_to_send = None
+
+if q_cols[0].button("من قام بتطوير هذا النظام؟", use_container_width=True):
+    prompt_to_send = "من قام بتطوير هذا النظام؟"
+if q_cols[1].button("ما هي الخدمات أو المنتجات المتاحة؟", use_container_width=True):
+    prompt_to_send = "ملخص سريع للخدمات والمنتجات المتاحة بناءً على المستندات؟"
+if q_cols[2].button("كيف يمكنني التواصل مع الدعم؟", use_container_width=True):
+    prompt_to_send = "كيف يمكنني التواصل مع الدعم البشري؟"
+
+# عرض سجل المحادثة
+for idx, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         st.write(message["content"])
+        # زر تقييم الرد لرسائل المساعد فقط
+        if message["role"] == "assistant" and idx > 0:
+            f_col1, f_col2, _ = st.columns([1, 1, 10])
+            if f_col1.button("👍", key=f"like_{idx}"):
+                st.toast("شكراً لتقييمك الإيجابي! 😊")
+            if f_col2.button("👎", key=f"dislike_{idx}"):
+                st.toast("شكراً لملاحظتك، سنعمل على تحسين الرد. 🛠️")
 
-# 5. استقبال مدخلات المستخدم
-if user_input := st.chat_input("اكتب استفسارك هنا..."):
-    # إضافة سؤال المستخدم
+# استقبال الإدخال من مربع النص أو الأزرار السريعة
+user_input = st.chat_input("اكتب استفسارك هنا...")
+if prompt_to_send and not user_input:
+    user_input = prompt_to_send
+
+if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.write(user_input)
 
-    # توليد الإجابة
     with st.chat_message("assistant"):
-        with st.spinner("جاري التفكير والأجابة..."):
+        with st.spinner("جاري تحليل الطلب وإعداد الإجابة..."):
             try:
-                # تحضير تاريخ المحادثة للنموذج
                 chat_history = []
                 for msg in st.session_state.messages[:-1]:
                     role = "user" if msg["role"] == "user" else "model"
@@ -121,24 +228,45 @@ if user_input := st.chat_input("اكتب استفسارك هنا..."):
                 
                 chat = model.start_chat(history=chat_history)
                 response = chat.send_message(user_input)
-                
                 bot_reply = response.text
-                st.write(bot_reply)
                 
-                # حفظ رد البوت
+                st.write(bot_reply)
                 st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+                st.rerun()
             except Exception as e:
-                st.error(f"حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: {str(e)}")
+                st.error(f"حدث خطأ أثناء معالجة الطلب: {str(e)}")
 
-# 6. زر تصدير المحادثة في الشريط الجانبي
+# ---------------------------------------------------------
+# 7. تصدير أدوات الشريط الجانبي (Clear & Download)
+# ---------------------------------------------------------
 with st.sidebar:
+    st.markdown("### 🛠️ إدارة الجلسة")
+    
+    if st.button("🗑️ مسح المحادثة والبدء من جديد", use_container_width=True):
+        st.session_state.messages = [
+            {"role": "assistant", "content": "مرحباً بك! 👋 أنا مساعد خدمة العملاء الذكي. كيف يمكنني مساعدتك اليوم؟"}
+        ]
+        st.rerun()
+
     if len(st.session_state.messages) > 1:
-        st.markdown("---")
-        chat_log = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in st.session_state.messages])
+        st.markdown("#### 📥 تصدير السجل")
+        
+        # تصدير نصي TXT
+        txt_log = "\n".join([f"{m['role'].upper()}: {m['content']}" for m in st.session_state.messages])
         st.download_button(
-            label="📥 تحميل سجل المحادثة (TXT)",
-            data=chat_log,
+            label="تحميل السجل (TXT)",
+            data=txt_log,
             file_name=f"chat_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
             mime="text/plain",
+            use_container_width=True
+        )
+        
+        # تصدير هيكلي JSON
+        json_log = json.dumps(st.session_state.messages, ensure_ascii=False, indent=2)
+        st.download_button(
+            label="تحميل السجل (JSON)",
+            data=json_log,
+            file_name=f"chat_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json",
             use_container_width=True
         )
