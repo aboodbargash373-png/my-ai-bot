@@ -51,7 +51,7 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 # ---------------------------------------------------------
-# 3. الشريط الجانبي (إخفاء توجيهات النظام والتركيز على الخيارات البسيطة)
+# 3. الشريط الجانبي
 # ---------------------------------------------------------
 with st.sidebar:
     st.markdown("## ⚙️ التحكم بالجلسة")
@@ -70,7 +70,7 @@ with st.sidebar:
     st.markdown("### 📞 الدعم الفني")
     st.markdown("[💬 تواصل مع الدعم البشري عبر واتساب](https://wa.me/0789944348)")
 
-# توجيهات النظام مخفية داخل الكود لحمايتها من العرض
+# توجيهات النظام مخفية داخل الكود لحمايتها
 HIDDEN_SYSTEM_PROMPT = (
     "أنت ممثل خدمة عملاء محترف ومهذب للغاية من تصميم وتطوير المهندس عبدالكريم (ENG ABDULKAREEM).\n"
     "إذا سألك أحد من طورك أو صنعك، أجب بفخر وفصاحة أنك نظام ذكي تم تطويره بواسطة المهندس عبدالكريم (ENG ABDULKAREEM).\n"
@@ -81,7 +81,7 @@ HIDDEN_SYSTEM_PROMPT = (
 # 4. الواجهة الرئيسية
 # ---------------------------------------------------------
 st.markdown("<div class='main-title'>🤖 Enterprise AI Customer Support</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>نظام خدمة العملاء المطور بالذكاء الاصطناعي مع دعم الصور والملفات</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-title'>نظام خدمة العملاء المطور بالذكاء الاصطناعي</div>", unsafe_allow_html=True)
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
@@ -114,39 +114,44 @@ for idx, message in enumerate(st.session_state.messages):
                 st.toast("شكراً لملاحظتك! 🛠️")
 
 # ---------------------------------------------------------
-# 5. منطقة الإرفاق والكتابة (زر + والمستندات)
+# 5. منطقة الإرفاق والكتابة المتكاملة بجانب بعضها
 # ---------------------------------------------------------
 st.markdown("---")
 
-uploaded_files = st.file_uploader(
-    "➕ إرفاق صور أو ملفات (PDF, TXT, CSV, PNG, JPG):",
-    type=["pdf", "txt", "csv", "png", "jpg", "jpeg"],
-    accept_multiple_files=True
-)
+# تصميم صف أفقي يضم زر الإرفاق بجانب صندوق الكتابة أو فوقه مباشرة بشكل مدمج
+col_upload, col_input = st.columns([1, 4])
+
+with col_upload:
+    uploaded_file = st.file_uploader(
+        "➕ إرفاق ملف/صورة",
+        type=["pdf", "txt", "csv", "png", "jpg", "jpeg"],
+        label_visibility="collapsed"
+    )
 
 user_input = st.chat_input("اكتب استفسارك هنا...")
 if prompt_to_send and not user_input:
     user_input = prompt_to_send
 
 if user_input:
-    # معالجة الملفات المرفوعة
     extracted_text = ""
     image_object = None
 
-    if uploaded_files:
-        for file in uploaded_files:
-            if file.name.endswith(".pdf"):
-                reader = PdfReader(file)
+    if uploaded_file:
+        try:
+            if uploaded_file.name.endswith(".pdf"):
+                reader = PdfReader(uploaded_file)
                 for page in reader.pages:
                     text = page.extract_text()
                     if text: extracted_text += text + "\n"
-            elif file.name.endswith(".txt"):
-                extracted_text += file.read().decode("utf-8") + "\n"
-            elif file.name.endswith(".csv"):
-                df = pd.read_csv(file)
+            elif uploaded_file.name.endswith(".txt"):
+                extracted_text += uploaded_file.read().decode("utf-8") + "\n"
+            elif uploaded_file.name.endswith(".csv"):
+                df = pd.read_csv(uploaded_file)
                 extracted_text += df.to_string() + "\n"
-            elif file.type.startswith("image"):
-                image_object = Image.open(file)
+            elif uploaded_file.type.startswith("image"):
+                image_object = Image.open(uploaded_file)
+        except Exception as e:
+            st.error(f"خطأ في قراءة المرفق: {e}")
 
     # معالجة رابط الموقع إن وجد
     if website_url:
