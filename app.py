@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. تصميم الواجهة السريعة (Cyberpunk CSS خفيف ونظيف)
+# 2. تصميم الواجهة السريعة (Cyberpunk CSS)
 st.markdown("""
 <style>
     .stApp {
@@ -86,9 +86,11 @@ is_arabic = "العربية" in selected_language
 if is_arabic:
     system_prompt = "أنت 'رداد' (Raddad Cyber AI)، مساعد خدمة عملاء ذكي، ودود، فائق السرعة، وتجيب باللغة العربية حصراً."
     welcome_msg = "مرحباً بك! ⚡ أنا **رداد**. كيف يمكنني مساعدتك اليوم؟"
+    subtitle_txt = "وكيل خدمة العملاء الفائق السرعة"
 else:
     system_prompt = "You are 'Raddad Cyber AI', a fast and friendly customer service assistant. Answer strictly in English."
     welcome_msg = "Welcome! ⚡ I am **Raddad Cyber AI**. How can I help you today?"
+    subtitle_txt = "Lightning-Fast AI Support Agent"
 
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": welcome_msg}]
@@ -101,7 +103,7 @@ model = genai.GenerativeModel(
 
 # العناوين والواجهة
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
-st.markdown(f"<div class='cyber-subtitle'>{'وكيل خدمة العملاء الفائق السرعة' | is_arabic if is_arabic else 'Lightning-Fast AI Support Agent'}</div>", unsafe_allow_html=True)
+st.markdown(f"<div class='cyber-subtitle'>{subtitle_txt}</div>", unsafe_allow_html=True)
 
 # عرض الرسائل القديمة
 for msg in st.session_state.messages:
