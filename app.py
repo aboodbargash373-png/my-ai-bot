@@ -82,30 +82,43 @@ if not API_KEY:
 
 genai.configure(api_key=API_KEY)
 
-# 4. التعليمات النظامية
-full_instruction = """
-أنت "رداد" (Raddad Cyber AI)، نظام خدمة العملاء الأكثر تطوراً وذكاءً.
-مهمتك تقديم إجابات دقيقة، فائقة السرعة، احترافية وبلهجة ودودة ومحترمة باللغة العربية.
-يمكنك تحليل الصوت، الصور المباشرة المأخوذة بالكاميرا، أو الملفات المرفقة والاستجابة لها بذكاء فائق.
-"""
-
-# 5. الشريط الجانبي
+# 4. اختيار اللغة والتعليمات النظامية الديناميكية
 with st.sidebar:
-    st.markdown("### ⚙️ وحدة التحكم الفائقة")
+    st.markdown("### ⚙️ وحدة التحكم / Control Panel")
+    selected_language = st.selectbox(
+        "🌐 لغة النظام / System Language:",
+        ["العربية 🇸🇦", "English 🇬🇧"]
+    )
     st.markdown("---")
     creativity_level = st.slider("⚡ مستوى الابتكار (Temperature):", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
-    
-    st.markdown("---")
+
+is_arabic = "العربية" in selected_language
+
+if is_arabic:
+    full_instruction = """
+    أنت "رداد" (Raddad Cyber AI)، نظام خدمة العملاء الأكثر تطوراً وذكاءً.
+    مهمتك تقديم إجابات دقيقة، فائقة السرعة، احترافية وبلهجة ودودة ومحترمة باللغة العربية حصراً.
+    يمكنك تحليل الصوت، الصور المباشرة المأخوذة بالكاميرا، أو الملفات المرفقة والاستجابة لها بذكاء فائق.
+    """
+    welcome_msg = "مرحباً بك في المستقبل! ⚡ أنا **رداد**. يمكنك التحدث معي بالصوت، استخدام الكاميرا، أو كتابة استفسارك مباشرة!"
+else:
+    full_instruction = """
+    You are "Raddad Cyber AI", an advanced, highly intelligent customer service agent.
+    Your mission is to provide accurate, lightning-fast, and professional responses strictly in English.
+    You can analyze live camera input, audio recordings, or uploaded media with high precision.
+    """
+    welcome_msg = "Welcome to the future! ⚡ I am **Raddad Cyber AI**. Feel free to speak, upload images, use your live camera, or type your query!"
+
+# 5. الشريط الجانبي وتحديث معلومات المحرك
+with st.sidebar:
     st.markdown("### 🤖 حالة المحرك")
-    st.success("● حالة النواة: نشط (ONLINE)")
-    st.info("● المحرك: Gemini 3.8 Flash")
-    st.info("● الميزات: كاميرا + صوت + نص مفعلة")
+    st.success("● Core Status: ONLINE" if not is_arabic else "● حالة النواة: نشط")
+    st.info("● Model: Gemini 3.8 Flash")
+    st.info("● Multimodal: Audio, Vision, Text Active")
     
     st.markdown("---")
-    if st.button("🗑️ إعادة ضبط الجلسة", use_container_width=True):
-        st.session_state.messages = [
-            {"role": "assistant", "content": "مرحباً بك في المستقبل! ⚡ أنا **رداد** - نظام خدمة العملاء الذكي. كيف يمكنني دعمك اليوم؟"}
-        ]
+    if st.button("🗑️ إعادة ضبط الجلسة" if is_arabic else "🗑️ Reset Session", use_container_width=True):
+        st.session_state.messages = [{"role": "assistant", "content": welcome_msg}]
         st.session_state.last_response_time = "0.00"
         st.rerun()
 
@@ -118,36 +131,40 @@ model = genai.GenerativeModel(
 
 # 7. إدارة حالة زمن الاستجابة الفعلي
 if "last_response_time" not in st.session_state:
-    st.session_state.last_response_time = "جاهز"
+    st.session_state.last_response_time = "جاهز" if is_arabic else "Ready"
 
 # 8. الهيدر وشريط المؤشرات الفعلي
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
-st.markdown("<div class='cyber-subtitle'>نظام الذكاء الاصطناعي التفاعلي متعدد الوسائط (صوت، صورة، نص)</div>", unsafe_allow_html=True)
+subtitle_text = "نظام الذكاء الاصطناعي التفاعلي متعدد الوسائط واللغات" if is_arabic else "Interactive Multimodal & Multilingual AI Customer Support"
+st.markdown(f"<div class='cyber-subtitle'>{subtitle_text}</div>", unsafe_allow_html=True)
 
-latency_display = f"{st.session_state.last_response_time} ثانية" if st.session_state.last_response_time != "جاهز" else "جاهز"
+latency_unit = "ثانية" if is_arabic else "s"
+latency_display = f"{st.session_state.last_response_time} {latency_unit}" if st.session_state.last_response_time not in ["جاهز", "Ready"] else st.session_state.last_response_time
+
+metric_vision = "صوت + رؤية مفعلة" if is_arabic else "Audio + Vision Active"
+metric_latency = "زمن الاستجابة الفعلي" if is_arabic else "Real-time Latency"
+metric_status = "نشط" if is_arabic else "ONLINE"
 
 st.markdown(f"""
 <div class="metrics-container">
     <div class="metric-card">
-        <div class="metric-value">صوت + رؤية مفعلة</div>
-        <div class="metric-label">المدخلات الذكية</div>
+        <div class="metric-value">{metric_vision}</div>
+        <div class="metric-label">{"المدخلات الذكية" if is_arabic else "Smart Inputs"}</div>
     </div>
     <div class="metric-card">
         <div class="metric-value">{latency_display}</div>
-        <div class="metric-label">زمن الاستجابة الفعلي</div>
+        <div class="metric-label">{metric_latency}</div>
     </div>
     <div class="metric-card">
-        <div class="metric-value">نشط</div>
-        <div class="metric-label">حالة النظام</div>
+        <div class="metric-value">{metric_status}</div>
+        <div class="metric-label">{"حالة النظام" if is_arabic else "System Status"}</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # 9. إدارة المحادثة
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "مرحباً بك في المستقبل! ⚡ أنا **رداد**. يمكنك التحدث معي بالصوت، استخدام الكاميرا، أو كتابة استفسارك مباشرة!"}
-    ]
+    st.session_state.messages = [{"role": "assistant", "content": welcome_msg}]
 
 for msg in st.session_state.messages:
     avatar = "⚡" if msg["role"] == "assistant" else "👤"
@@ -155,60 +172,66 @@ for msg in st.session_state.messages:
         st.write(msg["content"])
 
 # 10. اختصارات سريعة
-st.markdown("##### 🚀 اختصارات سريعة:")
+st.markdown("##### 🚀 اختصارات سريعة:" if is_arabic else "##### 🚀 Quick Shortcuts:")
 col1, col2, col3, col4 = st.columns(4)
 
 prompt_shortcut = None
 with col1:
-    if st.button("💡 الخدمات", use_container_width=True):
-        prompt_shortcut = "ما هي الخدمات والتسهيلات التي تقدمها؟"
+    btn_txt = "💡 الخدمات" if is_arabic else "💡 Services"
+    if st.button(btn_txt, use_container_width=True):
+        prompt_shortcut = "ما هي الخدمات والتسهيلات التي تقدمها؟" if is_arabic else "What services do you provide?"
 with col2:
-    if st.button("📦 الطلبات", use_container_width=True):
-        prompt_shortcut = "كيف يمكنني تتبع حالة طلبي؟"
+    btn_txt = "📦 الطلبات" if is_arabic else "📦 Orders"
+    if st.button(btn_txt, use_container_width=True):
+        prompt_shortcut = "كيف يمكنني تتبع حالة طلبي؟" if is_arabic else "How can I track my order?"
 with col3:
-    if st.button("🛠️ الدعم", use_container_width=True):
-        prompt_shortcut = "أحتاج لمساعدة في حل مشكلة تقنية."
+    btn_txt = "🛠️ الدعم" if is_arabic else "🛠️ Support"
+    if st.button(btn_txt, use_container_width=True):
+        prompt_shortcut = "أحتاج لمساعدة في حل مشكلة تقنية." if is_arabic else "I need help with a technical issue."
 with col4:
-    if st.button("⚡ العروض", use_container_width=True):
-        prompt_shortcut = "ما هي أحدث العروض والخصومات المتاحة؟"
+    btn_txt = "⚡ العروض" if is_arabic else "⚡ Offers"
+    if st.button(btn_txt, use_container_width=True):
+        prompt_shortcut = "ما هي أحدث العروض والخصومات المتاحة؟" if is_arabic else "What are the latest offers available?"
 
 # 11. تبويبات الإدخال المتقدمة (صور، كاميرا، صوت/مايك)
 st.markdown("---")
-tab_upload, tab_camera, tab_audio = st.tabs(["📁 رفع ملف/صورة", "📸 التقاط بالكاميرا", "🎙️ تسجيل صوتي (ميكروفون)"])
+tab_titles = ["📁 رفع صورة", "📸 الكاميرا المباشرة", "🎙️ التسجيل الصوتي"] if is_arabic else ["📁 Upload Image", "📸 Live Camera", "🎙️ Voice Input"]
+tab_upload, tab_camera, tab_audio = st.tabs(tab_titles)
 
 image_object = None
 audio_file_object = None
 
 with tab_upload:
-    uploaded_file = st.file_uploader("اختر صورة للتحليل:", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("اختر صورة للتحليل:" if is_arabic else "Select an image for analysis:", type=["jpg", "jpeg", "png"])
     if uploaded_file:
         image_object = Image.open(uploaded_file)
-        st.image(image_object, caption="الصورة المرفقة", use_container_width=True)
+        st.image(image_object, caption="الصورة المرفقة" if is_arabic else "Uploaded Image", use_container_width=True)
 
 with tab_camera:
-    camera_photo = st.camera_input("التقط صورة مباشرة لـ رداد:")
+    camera_photo = st.camera_input("التقط صورة مباشرة لـ رداد:" if is_arabic else "Capture photo for Raddad:")
     if camera_photo:
         image_object = Image.open(camera_photo)
-        st.image(image_object, caption="اللقطة الحية من الكاميرا", use_container_width=True)
+        st.image(image_object, caption="اللقطة الحية" if is_arabic else "Captured Photo", use_container_width=True)
 
 with tab_audio:
-    st.markdown("اضغط على زر التسجيل أدناه وتحدث بصوتك لـ رداد:")
-    audio_data = st.audio_input("تسجيل صوتي مباشر")
+    st.markdown("اضغط على زر التسجيل وتحدث بصوتك لـ رداد:" if is_arabic else "Press record and speak to Raddad:")
+    audio_data = st.audio_input("تسجيل صوتي" if is_arabic else "Audio Recording")
     if audio_data:
         audio_file_object = audio_data
-        st.success("✅ تم تسجيل الصوت بنجاح، اكتب سؤالك أو اضغط إرسال لمعالجة الصوت!")
+        st.success("✅ تم تسجيل الصوت بنجاح!" if is_arabic else "✅ Audio recorded successfully!")
 
-st.markdown("<div class='privacy-note'>🔒 الملفات والصور والتسجيلات الصوتية المعالجة لا يتم حفظها على السيرفر لضمان خصوصيتك الكاملة.</div>", unsafe_allow_html=True)
+privacy_msg = "🔒 الملفات والصور والتسجيلات الصوتية لا يتم حفظها لضمان الخصوصية." if is_arabic else "🔒 Uploaded files, images, and audio are processed privately and not stored."
+st.markdown(f"<div class='privacy-note'>{privacy_msg}</div>", unsafe_allow_html=True)
 
-# 12. استقبال المدخلات والتحليل (يدعم النص، الصورة، والصوت معاً)
-user_input = st.chat_input("اكتب استفسارك أو اطرح سؤالك الصوتي...")
+# 12. استقبال المدخلات والتحليل
+chat_placeholder = "اكتب استفسارك أو اطرح سؤالك الصوتي..." if is_arabic else "Type your prompt or audio question..."
+user_input = st.chat_input(chat_placeholder)
 
 if prompt_shortcut:
     user_input = prompt_shortcut
 
-# تفعيل الإرسال إذا وُجد نص، صورة، أو صوت
 if user_input or audio_file_object:
-    display_text = user_input if user_input else "🎤 [مستند صوتي مرسل للمساعد الذكي]"
+    display_text = user_input if user_input else ("🎤 [رسالة صوتية مرسلة]" if is_arabic else "🎤 [Audio Message Sent]")
     
     with st.chat_message("user", avatar="👤"):
         st.write(display_text)
@@ -218,22 +241,22 @@ if user_input or audio_file_object:
     st.session_state.messages.append({"role": "user", "content": display_text})
 
     with st.chat_message("assistant", avatar="⚡"):
-        with st.spinner("⚡ جاري معالجة الصوت والبيانات عبر المحرك المتقدم..."):
+        spinner_msg = "⚡ جاري المعالجة والتحليل..." if is_arabic else "⚡ Processing and analyzing data..."
+        with st.spinner(spinner_msg):
             try:
                 start_time = time.time()
                 
-                # تجهيز محتوى الإرسال لـ Gemini
                 content_payload = []
                 if user_input:
                     content_payload.append(user_input)
                 else:
-                    content_payload.append("الرجاء الاستماع لهذه الرسالة الصوتية والإجابة عليها باللغة العربية بأسلوب خدمة العملاء:")
+                    default_prompt = "الرجاء الاستماع لهذه الرسالة الصوتية والإجابة عليها بنفس اللغة وبأسلوب خدمة العملاء:" if is_arabic else "Please listen to this audio message and respond in the same language as an AI customer support agent:"
+                    content_payload.append(default_prompt)
 
                 if image_object:
                     content_payload.append(image_object)
                 
                 if audio_file_object:
-                    # قراءة بيانات الصوت وإرسالها للموديل
                     audio_bytes = audio_file_object.getvalue()
                     content_payload.append({
                         "mime_type": "audio/wav",
@@ -253,6 +276,6 @@ if user_input or audio_file_object:
             except Exception as e:
                 error_message = str(e)
                 if "429" in error_message or "quota" in error_message.lower():
-                    st.warning("⚠️ عذراً، النظام يشهد إقبالاً كبيراً حالياً وتم الوصول للحد الأقصى للتجارب المجانية اليومية. يرجى المحاولة لاحقاً!")
+                    st.warning("⚠️ عذراً، تم الوصول للحد الأقصى للتجارب المجانية اليومية. يرجى المحاولة لاحقاً!" if is_arabic else "⚠️ Quota limit reached. Please try again later!")
                 else:
                     st.error(f"⚠️ حدث خطأ أثناء المعالجة: {error_message}")
