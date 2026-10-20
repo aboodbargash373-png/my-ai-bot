@@ -11,20 +11,30 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. لغة التصميم المستقبلية (Cyberpunk CSS)
-st.markdown("""
+# 2. التقاط اللغة الحالية لتحديد اتجاه الكتابة (RTL أو LTR)
+if "lang_select" not in st.session_state:
+    st.session_state.lang_select = "العربية 🇸🇦"
+
+is_arabic = "العربية" in st.session_state.lang_select
+dir_val = "rtl" if is_arabic else "ltr"
+text_align_val = "right" if is_arabic else "left"
+
+# 3. لغة التصميم المستقبلية (Cyberpunk CSS مع دعم الاتجاهات الديناميكية)
+st.markdown(f"""
 <style>
-    .stApp {
+    .stApp {{
         background: radial-gradient(circle at 50% 10%, #101426 0%, #080a12 100%);
         color: #e0e6ed;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    section[data-testid="stSidebar"] {
+        direction: {dir_val};
+        text-align: {text_align_val};
+    }}
+    section[data-testid="stSidebar"] {{
         background: rgba(13, 17, 30, 0.85) !important;
         backdrop-filter: blur(12px);
         border-right: 1px solid rgba(0, 242, 254, 0.2);
-    }
-    .cyber-title {
+    }}
+    .cyber-title {{
         font-size: 2.6rem !important;
         font-weight: 900;
         text-align: center;
@@ -33,15 +43,15 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
         text-shadow: 0 0 25px rgba(0, 242, 254, 0.4);
         margin-bottom: 5px;
-    }
-    .cyber-subtitle {
+    }}
+    .cyber-subtitle {{
         text-align: center;
         color: #88a0c0;
         font-size: 0.95rem;
         margin-bottom: 25px;
         letter-spacing: 1px;
-    }
-    .metrics-container {
+    }}
+    .metrics-container {{
         display: flex;
         justify-content: space-around;
         background: rgba(16, 23, 42, 0.6);
@@ -50,31 +60,31 @@ st.markdown("""
         padding: 10px;
         margin-bottom: 20px;
         backdrop-filter: blur(8px);
-    }
-    .metric-value { color: #00f2fe; font-weight: bold; font-size: 0.9rem; text-align: center; }
-    .metric-label { color: #64748b; font-size: 0.75rem; text-align: center; }
-    .privacy-note {
+    }}
+    .metric-value {{ color: #00f2fe; font-weight: bold; font-size: 0.9rem; text-align: center; }}
+    .metric-label {{ color: #64748b; font-size: 0.75rem; text-align: center; }}
+    .privacy-note {{
         font-size: 0.75rem;
         color: #64748b;
         text-align: center;
         margin-top: 5px;
-    }
-    .stButton>button {
+    }}
+    .stButton>button {{
         background: linear-gradient(135deg, rgba(0, 242, 254, 0.1) 0%, rgba(79, 172, 254, 0.1) 100%) !important;
         color: #00f2fe !important;
         border: 1px solid rgba(0, 242, 254, 0.4) !important;
         border-radius: 20px !important;
         font-weight: 600 !important;
-    }
-    .stButton>button:hover {
+    }}
+    .stButton>button:hover {{
         background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
         color: #000000 !important;
         box-shadow: 0 0 15px rgba(0, 242, 254, 0.6) !important;
-    }
+    }}
 </style>
 """, unsafe_allow_html=True)
 
-# 3. إعداد مفتاح API الأمني
+# 4. إعداد مفتاح API الأمني
 API_KEY = st.secrets.get("GEMINI_API_KEY")
 if not API_KEY:
     st.error("⚠️ لم يتم العثور على مفتاح Gemini API. يرجى إضافته في Streamlit Secrets.")
@@ -82,11 +92,9 @@ if not API_KEY:
 
 genai.configure(api_key=API_KEY)
 
-# 4. إدارة تغيير اللغة وإعادة ضبط الشات تلقائياً
+# 5. إدارة تغيير اللغة والتعليمات
 with st.sidebar:
     st.markdown("### ⚙️ وحدة التحكم / Control Panel")
-    
-    # التقاط تغيير اللغة
     selected_language = st.selectbox(
         "🌐 لغة النظام / System Language:",
         ["العربية 🇸🇦", "English 🇬🇧"],
@@ -97,7 +105,6 @@ with st.sidebar:
 
 is_arabic = "العربية" in selected_language
 
-# تحديد رسالة الترحيب والتعليمات حسب اللغة
 if is_arabic:
     full_instruction = """
     أنت "رداد" (Raddad Cyber AI)، نظام خدمة العملاء الأكثر تطوراً وذكاءً.
@@ -113,13 +120,14 @@ else:
     """
     welcome_msg = "Welcome to the future! ⚡ I am **Raddad Cyber AI**. Feel free to speak, upload images, use your live camera, or type your query!"
 
-# تحديث السجل إذا تغيرت اللغة
+# تحديث السجل عند تبديل اللغة
 if "current_lang" not in st.session_state or st.session_state.current_lang != selected_language:
     st.session_state.current_lang = selected_language
     st.session_state.messages = [{"role": "assistant", "content": welcome_msg}]
     st.session_state.last_response_time = "جاهز" if is_arabic else "Ready"
+    st.rerun()
 
-# 5. الشريط الجانبي وتحديث حالة المحرك
+# 6. الشريط الجانبي وتحديث حالة المحرك
 with st.sidebar:
     st.markdown("### 🤖 حالة المحرك" if is_arabic else "### 🤖 Engine Status")
     st.success("● حالة النواة: نشط" if is_arabic else "● Core Status: ONLINE")
@@ -132,14 +140,17 @@ with st.sidebar:
         st.session_state.last_response_time = "0.00"
         st.rerun()
 
-# 6. تهيئة الموديل
+# 7. تهيئة الموديل
 model = genai.GenerativeModel(
     model_name="gemini-3.8-flash",
     system_instruction=full_instruction,
     generation_config={"temperature": creativity_level}
 )
 
-# 7. الهيدر وشريط المؤشرات الفعلي
+if "last_response_time" not in st.session_state:
+    st.session_state.last_response_time = "جاهز" if is_arabic else "Ready"
+
+# 8. الهيدر وشريط المؤشرات
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
 subtitle_text = "نظام الذكاء الاصطناعي التفاعلي متعدد الوسائط واللغات" if is_arabic else "Interactive Multimodal & Multilingual AI Customer Support"
 st.markdown(f"<div class='cyber-subtitle'>{subtitle_text}</div>", unsafe_allow_html=True)
@@ -169,13 +180,13 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 8. عرض سجل المحادثة
+# 9. المحادثة
 for msg in st.session_state.messages:
     avatar = "⚡" if msg["role"] == "assistant" else "👤"
     with st.chat_message(msg["role"], avatar=avatar):
         st.write(msg["content"])
 
-# 9. اختصارات سريعة
+# 10. اختصارات سريعة
 st.markdown("##### 🚀 اختصارات سريعة:" if is_arabic else "##### 🚀 Quick Shortcuts:")
 col1, col2, col3, col4 = st.columns(4)
 
@@ -197,7 +208,7 @@ with col4:
     if st.button(btn_txt, use_container_width=True):
         prompt_shortcut = "ما هي أحدث العروض والخصومات المتاحة؟" if is_arabic else "What are the latest offers available?"
 
-# 10. تبويبات الإدخال المتقدمة
+# 11. تبويبات الإدخال المتقدمة
 st.markdown("---")
 tab_titles = ["📁 رفع صورة", "📸 الكاميرا المباشرة", "🎙️ التسجيل الصوتي"] if is_arabic else ["📁 Upload Image", "📸 Live Camera", "🎙️ Voice Input"]
 tab_upload, tab_camera, tab_audio = st.tabs(tab_titles)
@@ -212,22 +223,22 @@ with tab_upload:
         st.image(image_object, caption="الصورة المرفقة" if is_arabic else "Uploaded Image", use_container_width=True)
 
 with tab_camera:
-    camera_photo = st.camera_input("التقط صورة مباشرة لـ رداد:" if is_arabic else "Capture photo for Raddad:")
+    camera_photo = st.camera_input("التقط صورة مباشرة لـ رداد (تأكد من السماح للكاميرا):" if is_arabic else "Capture photo for Raddad (allow camera permission):")
     if camera_photo:
         image_object = Image.open(camera_photo)
         st.image(image_object, caption="اللقطة الحية" if is_arabic else "Captured Photo", use_container_width=True)
 
 with tab_audio:
-    st.markdown("اضغط على زر التسجيل وتحدث بصوتك لـ رداد:" if is_arabic else "Press record and speak to Raddad:")
+    st.markdown("اضغط على زر التسجيل وتحدث بصوتك لـ رداد (تأكد من السماح للمايك):" if is_arabic else "Press record and speak to Raddad (allow mic permission):")
     audio_data = st.audio_input("تسجيل صوتي" if is_arabic else "Audio Recording")
     if audio_data:
         audio_file_object = audio_data
         st.success("✅ تم تسجيل الصوت بنجاح!" if is_arabic else "✅ Audio recorded successfully!")
 
-privacy_msg = "🔒 الملفات والصور والتسجيلات الصوتية لا يتم حفظها لضمان الخصوصية." if is_arabic else "🔒 Uploaded files, images, and audio are processed privately and not stored."
+privacy_msg = "🔒 الملفات والصور والتسجيلات الصوتية لا يتم حفظها على السيرفر لضمان الخصوصية." if is_arabic else "🔒 Uploaded files, images, and audio are processed privately and not stored."
 st.markdown(f"<div class='privacy-note'>{privacy_msg}</div>", unsafe_allow_html=True)
 
-# 11. استقبال المدخلات والتحليل
+# 12. استقبال المدخلات والتحليل
 chat_placeholder = "اكتب استفسارك أو اطرح سؤالك الصوتي..." if is_arabic else "Type your prompt or audio question..."
 user_input = st.chat_input(chat_placeholder)
 
@@ -280,6 +291,6 @@ if user_input or audio_file_object:
             except Exception as e:
                 error_message = str(e)
                 if "429" in error_message or "quota" in error_message.lower():
-                    st.warning("⚠️ عذراً، تم الوصول للحد الأقصى للتجارب المجانية اليومية. يرجى المحاولة لاحقاً!" if is_arabic else "⚠️ Quota limit reached. Please try again later!")
+                    st.warning("⚠️ عذراً، تم الوصول للحد الأقصته للتجارب المجانية اليومية. يرجى المحاولة لاحقاً!" if is_arabic else "⚠️ Quota limit reached. Please try again later!")
                 else:
                     st.error(f"⚠️ حدث خطأ أثناء المعالجة: {error_message}")
