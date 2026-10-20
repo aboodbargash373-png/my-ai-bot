@@ -82,7 +82,7 @@ if not API_KEY:
 
 genai.configure(api_key=API_KEY)
 
-# 4. دالة تتبع الطلبات المباشرة والسريعة جداً
+# 4. دالة تتبع الطلبات السريعة جداً
 def check_order_status(order_id: str) -> str:
     database = {
         "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
@@ -137,7 +137,7 @@ with st.sidebar:
         st.session_state.last_response_time = "0.00"
         st.rerun()
 
-# 7. تهيئة النموذج (بدون أدوات معلقة لتجنب البطء)
+# 7. تهيئة النموذج (بأداء فائق السرعة وبدون تعقيد)
 model = genai.GenerativeModel(
     model_name="gemini-3.8-flash",
     system_instruction=full_instruction,
@@ -236,7 +236,7 @@ with tab_audio:
 privacy_msg = "🔒 البيانات المعالجة لا يتم حفظها على السيرفر لضمان الخصوصية." if is_arabic else "🔒 Uploaded data processed privately and not stored."
 st.markdown(f"<div class='privacy-note'>{privacy_msg}</div>", unsafe_allow_html=True)
 
-# 12. معالجة المدخلات بسرعة فائقة
+# 12. معالجة المدخلات بأعلى سرعة وبدون استخدام سجل شات ثقيل يسبب التعليق
 chat_placeholder = "اكتب استفسارك أو رقم الطلب (مثل ORD-101)..." if is_arabic else "Type your prompt or order ID..."
 user_input = st.chat_input(chat_placeholder)
 
@@ -259,7 +259,7 @@ if user_input or audio_file_object:
             try:
                 start_time = time.time()
                 
-                # فحص سريع جداً إذا كان المستخدم يبحث عن طلب معين لتنفيذه بلحظات
+                # فحص فوري وسريع للأداة
                 tool_result = None
                 if user_input:
                     for code in ["ORD-101", "ORD-202", "ORD-303"]:
@@ -267,21 +267,17 @@ if user_input or audio_file_object:
                             tool_result = check_order_status(code)
                             break
                 
-                content_payload = []
+                # بناء مدخلات خفيفة ومباشرة للنموذج لتجنب أي بطء
+                history_context = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.messages[-4:]])
+                
                 if tool_result:
-                    # إذا وُجد الطلب، نطلب من النموذج صياغة النتيجة فوراً بدون انتظار
-                    prompt_final = f"العميل سأل عن طلبه وكانت نتيجة النظام كالتالي: '{tool_result}'. قم بصياغة رد خدمة عملاء احترافي ولطيف بناءً على هذه النتيجة باللغة العربية حصراً." if is_arabic else f"The customer asked about their order and the system returned: '{tool_result}'. Draft a professional customer service response based on this result strictly in English."
-                    content_payload.append(prompt_final)
+                    prompt_final = f"سياق المحادثة:\n{history_context}\n\nالنظام وجد النتيجة التالية للطلب: '{tool_result}'. أجب العميل باحترافية وسرعة باللغة العربية." if is_arabic else f"Conversation context:\n{history_context}\n\nSystem result: '{tool_result}'. Respond professionally and instantly in English."
                 else:
-                    if user_input:
-                        content_payload.append(user_input)
-                    else:
-                        default_prompt = "الرجاء الاستماع لهذه الرسالة الصوتية والإجابة عليها بنفس اللغة:" if is_arabic else "Please listen to this audio message and respond:"
-                        content_payload.append(default_prompt)
-
+                    prompt_final = f"سياق المحادثة:\n{history_context}\n\nسؤال العميل الأخير: {user_input if user_input else 'رسالة صوتية'}. أجب باحترافية وسرعة."
+                
+                content_payload = [prompt_final]
                 if image_object:
                     content_payload.append(image_object)
-                
                 if audio_file_object:
                     audio_bytes = audio_file_object.getvalue()
                     content_payload.append({
@@ -289,6 +285,7 @@ if user_input or audio_file_object:
                         "data": audio_bytes
                     })
 
+                # استخدام generate_content المباشر للسرعة القصوى
                 response = model.generate_content(content_payload)
 
                 elapsed_time = time.time() - start_time
