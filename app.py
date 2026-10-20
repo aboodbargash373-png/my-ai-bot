@@ -13,7 +13,7 @@ st.set_page_config(
 
 # 2. التقاط اللغة الحالية لتحديد اتجاه الكتابة (RTL أو LTR)
 if "lang_select" not in st.session_state:
-    st.session_state.lang_select = "العربية 🇸🇦"
+    st.session_state.lang_select = "العربية 🇯🇴"
 
 is_arabic = "العربية" in st.session_state.lang_select
 dir_val = "rtl" if is_arabic else "ltr"
