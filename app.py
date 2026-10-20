@@ -82,18 +82,22 @@ if not API_KEY:
 
 genai.configure(api_key=API_KEY)
 
-# 4. اختيار اللغة والتعليمات النظامية الديناميكية
+# 4. إدارة تغيير اللغة وإعادة ضبط الشات تلقائياً
 with st.sidebar:
     st.markdown("### ⚙️ وحدة التحكم / Control Panel")
+    
+    # التقاط تغيير اللغة
     selected_language = st.selectbox(
         "🌐 لغة النظام / System Language:",
-        ["العربية 🇸🇦", "English 🇬🇧"]
+        ["العربية 🇸🇦", "English 🇬🇧"],
+        key="lang_select"
     )
     st.markdown("---")
     creativity_level = st.slider("⚡ مستوى الابتكار (Temperature):", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
 
 is_arabic = "العربية" in selected_language
 
+# تحديد رسالة الترحيب والتعليمات حسب اللغة
 if is_arabic:
     full_instruction = """
     أنت "رداد" (Raddad Cyber AI)، نظام خدمة العملاء الأكثر تطوراً وذكاءً.
@@ -109,12 +113,18 @@ else:
     """
     welcome_msg = "Welcome to the future! ⚡ I am **Raddad Cyber AI**. Feel free to speak, upload images, use your live camera, or type your query!"
 
-# 5. الشريط الجانبي وتحديث معلومات المحرك
+# تحديث السجل إذا تغيرت اللغة
+if "current_lang" not in st.session_state or st.session_state.current_lang != selected_language:
+    st.session_state.current_lang = selected_language
+    st.session_state.messages = [{"role": "assistant", "content": welcome_msg}]
+    st.session_state.last_response_time = "جاهز" if is_arabic else "Ready"
+
+# 5. الشريط الجانبي وتحديث حالة المحرك
 with st.sidebar:
-    st.markdown("### 🤖 حالة المحرك")
-    st.success("● Core Status: ONLINE" if not is_arabic else "● حالة النواة: نشط")
-    st.info("● Model: Gemini 3.8 Flash")
-    st.info("● Multimodal: Audio, Vision, Text Active")
+    st.markdown("### 🤖 حالة المحرك" if is_arabic else "### 🤖 Engine Status")
+    st.success("● حالة النواة: نشط" if is_arabic else "● Core Status: ONLINE")
+    st.info("● المحرك: Gemini 3.8 Flash" if is_arabic else "● Model: Gemini 3.8 Flash")
+    st.info("● الميزات: كاميرا + صوت + نص" if is_arabic else "● Features: Vision + Audio + Text")
     
     st.markdown("---")
     if st.button("🗑️ إعادة ضبط الجلسة" if is_arabic else "🗑️ Reset Session", use_container_width=True):
@@ -129,17 +139,14 @@ model = genai.GenerativeModel(
     generation_config={"temperature": creativity_level}
 )
 
-# 7. إدارة حالة زمن الاستجابة الفعلي
-if "last_response_time" not in st.session_state:
-    st.session_state.last_response_time = "جاهز" if is_arabic else "Ready"
-
-# 8. الهيدر وشريط المؤشرات الفعلي
+# 7. الهيدر وشريط المؤشرات الفعلي
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
 subtitle_text = "نظام الذكاء الاصطناعي التفاعلي متعدد الوسائط واللغات" if is_arabic else "Interactive Multimodal & Multilingual AI Customer Support"
 st.markdown(f"<div class='cyber-subtitle'>{subtitle_text}</div>", unsafe_allow_html=True)
 
 latency_unit = "ثانية" if is_arabic else "s"
-latency_display = f"{st.session_state.last_response_time} {latency_unit}" if st.session_state.last_response_time not in ["جاهز", "Ready"] else st.session_state.last_response_time
+latency_val = st.session_state.last_response_time
+latency_display = f"{latency_val} {latency_unit}" if latency_val not in ["جاهز", "Ready"] else latency_val
 
 metric_vision = "صوت + رؤية مفعلة" if is_arabic else "Audio + Vision Active"
 metric_latency = "زمن الاستجابة الفعلي" if is_arabic else "Real-time Latency"
@@ -162,16 +169,13 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 9. إدارة المحادثة
-if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": welcome_msg}]
-
+# 8. عرض سجل المحادثة
 for msg in st.session_state.messages:
     avatar = "⚡" if msg["role"] == "assistant" else "👤"
     with st.chat_message(msg["role"], avatar=avatar):
         st.write(msg["content"])
 
-# 10. اختصارات سريعة
+# 9. اختصارات سريعة
 st.markdown("##### 🚀 اختصارات سريعة:" if is_arabic else "##### 🚀 Quick Shortcuts:")
 col1, col2, col3, col4 = st.columns(4)
 
@@ -193,7 +197,7 @@ with col4:
     if st.button(btn_txt, use_container_width=True):
         prompt_shortcut = "ما هي أحدث العروض والخصومات المتاحة؟" if is_arabic else "What are the latest offers available?"
 
-# 11. تبويبات الإدخال المتقدمة (صور، كاميرا، صوت/مايك)
+# 10. تبويبات الإدخال المتقدمة
 st.markdown("---")
 tab_titles = ["📁 رفع صورة", "📸 الكاميرا المباشرة", "🎙️ التسجيل الصوتي"] if is_arabic else ["📁 Upload Image", "📸 Live Camera", "🎙️ Voice Input"]
 tab_upload, tab_camera, tab_audio = st.tabs(tab_titles)
@@ -223,7 +227,7 @@ with tab_audio:
 privacy_msg = "🔒 الملفات والصور والتسجيلات الصوتية لا يتم حفظها لضمان الخصوصية." if is_arabic else "🔒 Uploaded files, images, and audio are processed privately and not stored."
 st.markdown(f"<div class='privacy-note'>{privacy_msg}</div>", unsafe_allow_html=True)
 
-# 12. استقبال المدخلات والتحليل
+# 11. استقبال المدخلات والتحليل
 chat_placeholder = "اكتب استفسارك أو اطرح سؤالك الصوتي..." if is_arabic else "Type your prompt or audio question..."
 user_input = st.chat_input(chat_placeholder)
 
