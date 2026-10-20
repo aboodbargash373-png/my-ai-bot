@@ -181,17 +181,19 @@ if user_input:
 
     with st.chat_message("assistant"):
         with st.spinner("جاري تحليل المعطيات والإجابة..."):
-            try:
-                if image_object:
-                    response = model.generate_content([user_input, image_object])
-                else:
-                    response = model.generate_content(user_input)
-                
-                bot_reply = response.text
-                st.write(bot_reply)
-                st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-                st.rerun()
-                    except Exception as e:
+    
+        try:
+            if image_object:
+                response = model.generate_content([user_input, image_object])
+            else:
+                response = model.generate_content(user_input)
+
+            bot_reply = response.text
+            st.write(bot_reply)
+
+            st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+            st.rerun()
+        except Exception as e:
             error_message = str(e)
             if "429" in error_message or "quota" in error_message.lower():
                 st.warning("⚠️ عذراً، النظام يشهد إقبالاً كبيراً حالياً وتم الوصول للحد الأقصى للتجارب المجانية اليومية. يرجى المحاولة لاحقاً!")
@@ -202,7 +204,6 @@ if user_input:
 with st.sidebar:
     if st.button("🗑️ مسح المحادثة", use_container_width=True):
         st.session_state.messages = [
-             {"role": "assistant", "content": "مرحباً بك! 🤚 أنا مساعد خدمة العملاء الذكي 'رداد'. كيف يمكنني مساعدتك اليوم؟"}
-
+            {"role": "assistant", "content": "مرحباً بك! ✋ أنا مساعد خدمة العملاء الذكي رداد. كيف يمكنني مساعدتك اليوم؟"}
         ]
         st.rerun()
