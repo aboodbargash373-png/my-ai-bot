@@ -198,6 +198,6 @@ if user_input:
 with st.sidebar:
     if st.button("🗑️ مسح المحادثة", use_container_width=True):
         st.session_state.messages = [
-            {"role": "assistant", "content": "مرحباً بك! 👋 أنا مساعد خدمة العملاء الذكي. كيف يمكنني مساعدتك اليوم؟"}
+            {"role": "assistant", "content": "مرحباً بك! 👋 أنا مساعد خدمة العملاء الذكي "رداد". كيف يمكنني مساعدتك اليوم؟"}
         ]
         st.rerun()
