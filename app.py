@@ -191,8 +191,12 @@ if user_input:
                 st.write(bot_reply)
                 st.session_state.messages.append({"role": "assistant", "content": bot_reply})
                 st.rerun()
-            except Exception as e:
-                st.error(f"حدث خطأ: {e}")
+                    except Exception as e:
+            error_message = str(e)
+            if "429" in error_message or "quota" in error_message.lower():
+                st.warning("⚠️ عذراً، النظام يشهد إقبالاً كبيراً حالياً وتم الوصول للحد الأقصى للتجارب المجانية اليومية. يرجى المحاولة لاحقاً!")
+            else:
+                st.error("⚠️ حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى.")
 
 # إدارة الجلسة في أسفل الشريط الجانبي
 with st.sidebar:
