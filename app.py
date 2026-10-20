@@ -82,22 +82,20 @@ if not API_KEY:
 
 genai.configure(api_key=API_KEY)
 
-# 4. تعريف الأداة الحقيقية (Tool) للوكيل الذكي (AI Agent)
+# 4. تعريف الأداة الحقيقية (Tool) لتتبع الطلبات
 def track_order(order_id: str) -> str:
     """
     تتبع حالة الطلب بناءً على رقم الطلب المقدم من العميل.
     
     Args:
-        order_id: رقم الطلب المراد الاستعلام عن حالته (مثل: ORD-101 أو ORD-555)
+        order_id: رقم الطلب المراد الاستعلام عن حالته (مثل: ORD-101، ORD-202، ORD-303)
     """
-    # قاعدة بيانات وهمية سريعة للاختبار
     database = {
         "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
-        "ORD-202": "تم تجهيز الطلب وهو في انتظار شركة الشحن 📦",
+        "ORD-202": "تم تجهيز الطلب وهو في انتظار الاستلام من قبل شركة الشحن 📦",
         "ORD-303": "تم تسليم الطلب بنجاح. شكراً لتعاملكم معنا! ✅"
     }
     
-    # تنظيف رقم الطلب للبحث بدقة
     clean_id = order_id.strip().upper()
     if clean_id in database:
         return f"حالة الطلب {clean_id}: {database[clean_id]}"
@@ -132,7 +130,7 @@ else:
     """
     welcome_msg = "Welcome to the future! ⚡ I am **Raddad Cyber AI** (AI Agent). I can help you track orders, answer questions, or process voice and images instantly!"
 
-# إعادة ضبط الجلسة عند تغيير اللغة
+# تحديث السجل عند تغيير اللغة دون عمل مشاكل
 if "current_lang" not in st.session_state or st.session_state.current_lang != selected_language:
     st.session_state.current_lang = selected_language
     st.session_state.messages = [{"role": "assistant", "content": welcome_msg}]
@@ -143,7 +141,6 @@ with st.sidebar:
     st.markdown("### 🤖 Engine Status / حالة المحرك")
     st.success("● Agent Status: ACTIVE" if not is_arabic else "● حالة الوكيل: نشط")
     st.info("● Model: Gemini 3.8 Flash + Tools")
-    st.info("● Features: Auto-Tool Calling")
     
     st.markdown("---")
     if st.button("🗑️ Reset / إعادة ضبط", use_container_width=True):
@@ -151,11 +148,11 @@ with st.sidebar:
         st.session_state.last_response_time = "0.00"
         st.rerun()
 
-# 7. تهيئة نموذج الذكاء الاصطناعي مع ربط الأداة (Tools)
+# 7. تهيئة نموذج الذكاء الاصطناعي مع ربط الأداة
 model = genai.GenerativeModel(
     model_name="gemini-3.8-flash",
     system_instruction=full_instruction,
-    tools=[track_order],  # ربط الأداة البرمجية مباشرة بالنموذج ليصبح AI Agent حقيقي
+    tools=[track_order],
     generation_config={"temperature": creativity_level}
 )
 
@@ -192,13 +189,13 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 9. عرض الرسائل
+# 9. عرض الرسائل بسلاسة دون رفع الشاشة
 for msg in st.session_state.messages:
     avatar = "⚡" if msg["role"] == "assistant" else "👤"
     with st.chat_message(msg["role"], avatar=avatar):
         st.write(msg["content"])
 
-# 10. الأزرار السريعة (محدثة لتجربة أداة تتبع الطلبات مباشرة)
+# 10. الأزرار السريعة
 st.markdown("##### 🚀 اختصارات سريعة (تجربة الوكيل):" if is_arabic else "##### 🚀 Quick Shortcuts (Agent Test):")
 col1, col2 = st.columns(2)
 col3, col4 = st.columns(2)
@@ -251,7 +248,7 @@ with tab_audio:
 privacy_msg = "🔒 البيانات المعالجة لا يتم حفظها على السيرفر لضمان الخصوصية." if is_arabic else "🔒 Uploaded data processed privately and not stored."
 st.markdown(f"<div class='privacy-note'>{privacy_msg}</div>", unsafe_allow_html=True)
 
-# 12. معالجة الإدخال وتوليد الاستجابة الآلية مع تشغيل الـ Agent والـ Tools
+# 12. معالجة المدخلات بدون استدعاء st.rerun المزعج
 chat_placeholder = "اكتب استفسارك أو رقم الطلب (مثل ORD-101)..." if is_arabic else "Type your prompt or order ID..."
 user_input = st.chat_input(chat_placeholder)
 
@@ -269,7 +266,7 @@ if user_input or audio_file_object:
     st.session_state.messages.append({"role": "user", "content": display_text})
 
     with st.chat_message("assistant", avatar="⚡"):
-        spinner_msg = "⚡ جاري التفكير واستدعاء أدوات النظام..." if is_arabic else "⚡ Thinking and executing tool..."
+        spinner_msg = "⚡ جاري الفحص والتنفيذ..." if is_arabic else "⚡ Processing..."
         with st.spinner(spinner_msg):
             try:
                 start_time = time.time()
@@ -291,7 +288,7 @@ if user_input or audio_file_object:
                         "data": audio_bytes
                     })
 
-                # استخدام chat session لتمكين النموذج من تنفيذ الـ Tools تلقائياً والرد بسرعة
+                # إنشاء شات مستمر وتنفيذ الأدوات تلقائياً بدون إعادة تحميل الصفحة
                 chat = model.start_chat(enable_automatic_function_calling=True)
                 response = chat.send_message(content_payload)
 
@@ -301,7 +298,8 @@ if user_input or audio_file_object:
                 bot_reply = response.text
                 st.write(bot_reply)
                 st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-                st.rerun()
+                
+                # تم حذف st.rerun() لمنع ارتفاع الشاشة للأعلى!
 
             except Exception as e:
                 error_message = str(e)
