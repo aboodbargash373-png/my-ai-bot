@@ -82,25 +82,17 @@ if not API_KEY:
 
 genai.configure(api_key=API_KEY)
 
-# 4. تعريف الأداة الحقيقية (Tool) لتتبع الطلبات
-def track_order(order_id: str) -> str:
-    """
-    تتبع حالة الطلب بناءً على رقم الطلب المقدم من العميل.
-    
-    Args:
-        order_id: رقم الطلب المراد الاستعلام عن حالته (مثل: ORD-101، ORD-202، ORD-303)
-    """
+# 4. دالة تتبع الطلبات المباشرة والسريعة جداً
+def check_order_status(order_id: str) -> str:
     database = {
         "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
         "ORD-202": "تم تجهيز الطلب وهو في انتظار الاستلام من قبل شركة الشحن 📦",
         "ORD-303": "تم تسليم الطلب بنجاح. شكراً لتعاملكم معنا! ✅"
     }
-    
     clean_id = order_id.strip().upper()
     if clean_id in database:
         return f"حالة الطلب {clean_id}: {database[clean_id]}"
-    else:
-        return f"عذراً، رقم الطلب {clean_id} غير موجود في النظام. يرجى التحقق من الرقم والمحاولة لاحقاً."
+    return None
 
 # 5. إعدادات القائمة الجانبية واللغة
 with st.sidebar:
@@ -119,18 +111,15 @@ if is_arabic:
     full_instruction = """
     أنت "رداد" (Raddad Cyber AI)، نظام خدمة العملاء الأذكى والأسرع.
     مهمتك تقديم إجابات فورية، دقيقة، واحترافية باللغة العربية حصراً.
-    لديك القدرة على استخدام أدوات النظام (مثل تتبع الطلبات) فوراً عندما يطلب العميل ذلك، بالإضافة لتحليل الصور والصوت.
     """
-    welcome_msg = "مرحباً بك في المستقبل! ⚡ أنا **رداد** (AI Agent). يمكنني مساعدتك في تتبع طلباتك، الإجابة عن استفساراتك، أو تحليل الصور والصوت فوراً!"
+    welcome_msg = "مرحباً بك في المستقبل! ⚡ أنا **رداد**. يمكنني مساعدتك في تتبع طلباتك أو الإجابة عن استفساراتك فوراً!"
 else:
     full_instruction = """
     You are "Raddad Cyber AI", an advanced, lightning-fast AI Agent for customer support.
     Your mission is to provide instant, accurate, and professional responses strictly in English.
-    You have access to system tools (like order tracking) and multimodal capabilities.
     """
-    welcome_msg = "Welcome to the future! ⚡ I am **Raddad Cyber AI** (AI Agent). I can help you track orders, answer questions, or process voice and images instantly!"
+    welcome_msg = "Welcome to the future! ⚡ I am **Raddad Cyber AI**. I can help you track orders or answer questions instantly!"
 
-# تحديث السجل عند تغيير اللغة دون عمل مشاكل
 if "current_lang" not in st.session_state or st.session_state.current_lang != selected_language:
     st.session_state.current_lang = selected_language
     st.session_state.messages = [{"role": "assistant", "content": welcome_msg}]
@@ -140,7 +129,7 @@ if "current_lang" not in st.session_state or st.session_state.current_lang != se
 with st.sidebar:
     st.markdown("### 🤖 Engine Status / حالة المحرك")
     st.success("● Agent Status: ACTIVE" if not is_arabic else "● حالة الوكيل: نشط")
-    st.info("● Model: Gemini 3.8 Flash + Tools")
+    st.info("● Model: Gemini 3.8 Flash")
     
     st.markdown("---")
     if st.button("🗑️ Reset / إعادة ضبط", use_container_width=True):
@@ -148,11 +137,10 @@ with st.sidebar:
         st.session_state.last_response_time = "0.00"
         st.rerun()
 
-# 7. تهيئة نموذج الذكاء الاصطناعي مع ربط الأداة
+# 7. تهيئة النموذج (بدون أدوات معلقة لتجنب البطء)
 model = genai.GenerativeModel(
     model_name="gemini-3.8-flash",
     system_instruction=full_instruction,
-    tools=[track_order],
     generation_config={"temperature": creativity_level}
 )
 
@@ -161,14 +149,14 @@ if "last_response_time" not in st.session_state:
 
 # 8. العنوان والمؤشرات
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
-subtitle_text = "وكيل الذكاء الاصطناعي التفاعلي المدعوم بالأدوات (AI Agent)" if is_arabic else "Interactive AI Agent Powered with System Tools"
+subtitle_text = "وكيل الذكاء الاصطناعي الفائق السرعة (AI Agent)" if is_arabic else "Lightning-Fast AI Agent"
 st.markdown(f"<div class='cyber-subtitle'>{subtitle_text}</div>", unsafe_allow_html=True)
 
 latency_unit = "ثانية" if is_arabic else "s"
 latency_val = st.session_state.last_response_time
 latency_display = f"{latency_val} {latency_unit}" if latency_val not in ["جاهز", "Ready"] else latency_val
 
-metric_vision = "وكيل ذكي (Tools)" if is_arabic else "AI Agent (Tools)"
+metric_vision = "وكيل ذكي (سريع)" if is_arabic else "Fast AI Agent"
 metric_latency = "سرعة الاستجابة" if is_arabic else "Latency"
 metric_status = "نشط" if is_arabic else "ONLINE"
 
@@ -189,14 +177,14 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 9. عرض الرسائل بسلاسة دون رفع الشاشة
+# 9. عرض الرسائل
 for msg in st.session_state.messages:
     avatar = "⚡" if msg["role"] == "assistant" else "👤"
     with st.chat_message(msg["role"], avatar=avatar):
         st.write(msg["content"])
 
 # 10. الأزرار السريعة
-st.markdown("##### 🚀 اختصارات سريعة (تجربة الوكيل):" if is_arabic else "##### 🚀 Quick Shortcuts (Agent Test):")
+st.markdown("##### 🚀 اختصارات سريعة:" if is_arabic else "##### 🚀 Quick Shortcuts:")
 col1, col2 = st.columns(2)
 col3, col4 = st.columns(2)
 
@@ -218,7 +206,7 @@ with col4:
     if st.button(btn_txt, use_container_width=True):
         prompt_shortcut = "أحتاج لمساعدة في حل مشكلة تقنية." if is_arabic else "I need help with a technical issue."
 
-# 11. الوسائط (صورة / كاميرا / صوت)
+# 11. الوسائط
 st.markdown("---")
 tab_titles = ["📁 صورة", "📸 كاميرا", "🎙️ صوت"] if is_arabic else ["📁 Image", "📸 Camera", "🎙️ Voice"]
 tab_upload, tab_camera, tab_audio = st.tabs(tab_titles)
@@ -248,7 +236,7 @@ with tab_audio:
 privacy_msg = "🔒 البيانات المعالجة لا يتم حفظها على السيرفر لضمان الخصوصية." if is_arabic else "🔒 Uploaded data processed privately and not stored."
 st.markdown(f"<div class='privacy-note'>{privacy_msg}</div>", unsafe_allow_html=True)
 
-# 12. معالجة المدخلات بدون استدعاء st.rerun المزعج
+# 12. معالجة المدخلات بسرعة فائقة
 chat_placeholder = "اكتب استفسارك أو رقم الطلب (مثل ORD-101)..." if is_arabic else "Type your prompt or order ID..."
 user_input = st.chat_input(chat_placeholder)
 
@@ -266,17 +254,30 @@ if user_input or audio_file_object:
     st.session_state.messages.append({"role": "user", "content": display_text})
 
     with st.chat_message("assistant", avatar="⚡"):
-        spinner_msg = "⚡ جاري الفحص والتنفيذ..." if is_arabic else "⚡ Processing..."
+        spinner_msg = "⚡ جاري المعالجة الفورية..." if is_arabic else "⚡ Processing instantly..."
         with st.spinner(spinner_msg):
             try:
                 start_time = time.time()
                 
-                content_payload = []
+                # فحص سريع جداً إذا كان المستخدم يبحث عن طلب معين لتنفيذه بلحظات
+                tool_result = None
                 if user_input:
-                    content_payload.append(user_input)
+                    for code in ["ORD-101", "ORD-202", "ORD-303"]:
+                        if code in user_input.upper():
+                            tool_result = check_order_status(code)
+                            break
+                
+                content_payload = []
+                if tool_result:
+                    # إذا وُجد الطلب، نطلب من النموذج صياغة النتيجة فوراً بدون انتظار
+                    prompt_final = f"العميل سأل عن طلبه وكانت نتيجة النظام كالتالي: '{tool_result}'. قم بصياغة رد خدمة عملاء احترافي ولطيف بناءً على هذه النتيجة باللغة العربية حصراً." if is_arabic else f"The customer asked about their order and the system returned: '{tool_result}'. Draft a professional customer service response based on this result strictly in English."
+                    content_payload.append(prompt_final)
                 else:
-                    default_prompt = "الرجاء الاستماع لهذه الرسالة الصوتية والإجابة عليها بنفس اللغة:" if is_arabic else "Please listen to this audio message and respond:"
-                    content_payload.append(default_prompt)
+                    if user_input:
+                        content_payload.append(user_input)
+                    else:
+                        default_prompt = "الرجاء الاستماع لهذه الرسالة الصوتية والإجابة عليها بنفس اللغة:" if is_arabic else "Please listen to this audio message and respond:"
+                        content_payload.append(default_prompt)
 
                 if image_object:
                     content_payload.append(image_object)
@@ -288,9 +289,7 @@ if user_input or audio_file_object:
                         "data": audio_bytes
                     })
 
-                # إنشاء شات مستمر وتنفيذ الأدوات تلقائياً بدون إعادة تحميل الصفحة
-                chat = model.start_chat(enable_automatic_function_calling=True)
-                response = chat.send_message(content_payload)
+                response = model.generate_content(content_payload)
 
                 elapsed_time = time.time() - start_time
                 st.session_state.last_response_time = f"{elapsed_time:.2f}"
@@ -298,8 +297,6 @@ if user_input or audio_file_object:
                 bot_reply = response.text
                 st.write(bot_reply)
                 st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-                
-                # تم حذف st.rerun() لمنع ارتفاع الشاشة للأعلى!
 
             except Exception as e:
                 error_message = str(e)
