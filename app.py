@@ -536,4 +536,3 @@ st.markdown(
     '<div class="small-note">🔐 حافظ على سرية مفتاح API ولا ترفعه إلى GitHub.</div>',
     unsafe_allow_html=True
 )
-```
