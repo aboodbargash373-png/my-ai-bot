@@ -5,23 +5,32 @@ import time
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="رداد - Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. تصميم سريع وبسيط
+# 2. تصميم CSS خفيف ومباشر
 st.markdown("""
 <style>
     .stApp { background-color: #0d1117; color: #c9d1d9; }
-    .cyber-title { font-size: 2rem; font-weight: bold; text-align: center; color: #58a6ff; }
+    .cyber-title { font-size: 2.2rem; font-weight: bold; text-align: center; color: #58a6ff; margin-bottom: 20px; }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. إعداد المفتاح
+# 3. إعداد مفتاح API
 API_KEY = st.secrets.get("GEMINI_API_KEY")
 if not API_KEY:
-    st.error("⚠️ يرجى إضافة GEMINI_API_KEY في Secrets.")
+    st.error("⚠️ يرجى إضافة GEMINI_API_KEY في Streamlit Secrets.")
     st.stop()
 
-genai.configure(api_key=API_KEY)
+# 4. تخزين اتصال النموذج في الذاكرة لمنع إعادة الاتصال الثقيل مع كل رسالة (السرعة)
+@st.cache_resource
+def get_model():
+    genai.configure(api_key=API_KEY)
+    return genai.GenerativeModel(
+        model_name="gemini-3.8-flash",
+        system_instruction="أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية."
+    )
 
-# 4. أداة تتبع الطلبات
+model = get_model()
+
+# 5. أداة تتبع الطلبات المباشرة
 def check_order_status(order_id: str) -> str:
     db = {
         "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
@@ -29,20 +38,14 @@ def check_order_status(order_id: str) -> str:
         "ORD-303": "تم تسليم الطلب بنجاح ✅"
     }
     clean_id = order_id.strip().upper()
-    return db.get(clean_id, f"رقم الطلب {clean_id} غير موجود.")
-
-# 5. تهيئة الموديل الخفيف
-model = genai.GenerativeModel(
-    model_name="gemini-3.8-flash",
-    system_instruction="أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بأسلوب مختصر واحترافي."
-)
+    return db.get(clean_id, f"رقم الطلب {clean_id} غير موجود في النظام.")
 
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "مرحباً بك! ⚡ أنا **رداد**. كيف أستطيع مساعدتك اليوم؟"}]
 
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
 
-# عرض المحادثة
+# عرض سجل الرسائل
 for msg in st.session_state.messages:
     avatar = "⚡" if msg["role"] == "assistant" else "👤"
     with st.chat_message(msg["role"], avatar=avatar):
@@ -56,18 +59,18 @@ if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
 
     with st.chat_message("assistant", avatar="⚡"):
-        # فحص سريع جداً للأداة محلياً قبل الاتصال بـ Gemini
+        # فحص محلي فوري للأداة
         tool_res = None
         for code in ["ORD-101", "ORD-202", "ORD-303"]:
             if code in user_input.upper():
                 tool_res = check_order_status(code)
                 break
 
-        prompt_to_send = f"نتيجة النظام للطلب: {tool_res}" if tool_res else user_input
+        prompt_final = f"نتيجة فحص النظام لطلب العميل: {tool_res}" if tool_res else user_input
 
         try:
-            # استخدام البث المباشر المباشر لتسريع ظهور أول كلمة
-            res_stream = model.generate_content(prompt_to_send, stream=True)
+            # بث تدفقي سريع
+            res_stream = model.generate_content(prompt_final, stream=True)
             
             def stream_gen():
                 for chunk in res_stream:
@@ -77,4 +80,5 @@ if user_input:
             full_res = st.write_stream(stream_gen)
             st.session_state.messages.append({"role": "assistant", "content": full_res})
         except Exception as e:
-            st.error(f"خطأ: {e}")
+            st.error(f"حدث خطأ: {e}")
+            
