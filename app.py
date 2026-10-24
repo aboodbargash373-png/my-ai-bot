@@ -1,305 +1,540 @@
-import streamlit as st
-import google.generativeai as genai
-from PIL import Image
+```python
+import os
 import time
+from io import BytesIO
 
-# 1. إعدادات الصفحة الأساسية
+import streamlit as st
+from PIL import Image
+from google import genai
+from google.genai import types
+
+# إعدادات الصفحة
 st.set_page_config(
-    page_title="رداد - Raddad Cyber AI",
+    page_title="RADDAD CYBER AI",
     page_icon="⚡",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. تصميم الواجهة الاحترافي (Cyberpunk CSS)
+# تصميم الواجهة
 st.markdown("""
 <style>
-    .stApp {
-        background: radial-gradient(circle at 50% 10%, #101426 0%, #080a12 100%);
-        color: #e0e6ed;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+
+.stApp {
+    background: radial-gradient(ellipse at top, #101a32 0%, #080b13 60%, #070910 100%);
+    color: #e5edf8;
+    font-family: 'IBM Plex Sans Arabic', 'Segoe UI', sans-serif;
+}
+
+section[data-testid="stSidebar"] {
+    background: rgba(10, 15, 28, 0.96);
+    border-right: 1px solid #18344a;
+}
+
+.block-container {
+    max-width: 1120px;
+    padding-top: 2rem;
+    padding-bottom: 5rem;
+}
+
+.hero {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.hero h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 900;
+    background: linear-gradient(110deg, #22d3ee, #60a5fa, #38bdf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero p {
+    color: #9db2ce;
+}
+
+.metric-wrap {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 1.5rem 0;
+}
+
+.metric {
+    background: rgba(15, 30, 51, 0.85);
+    border: 1px solid rgba(34, 211, 238, 0.25);
+    border-radius: 16px;
+    padding: 15px;
+    text-align: center;
+}
+
+.metric b {
+    display: block;
+    color: #22d3ee;
+}
+
+.metric span {
+    color: #94a3b8;
+    font-size: 0.8rem;
+}
+
+.stButton > button {
+    border-radius: 14px;
+    border: 1px solid #155e75;
+    background: linear-gradient(120deg, #102334, #111b30);
+    color: #67e8f9;
+    font-weight: 600;
+    min-height: 2.7rem;
+}
+
+.stButton > button:hover {
+    border-color: #22d3ee;
+    background: #12344a;
+}
+
+[data-testid="stChatMessage"] {
+    border: 1px solid rgba(100, 116, 139, 0.15);
+    border-radius: 16px;
+    background: rgba(12, 18, 31, 0.55);
+    padding: 0.8rem;
+}
+
+.small-note {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    text-align: center;
+    margin-top: 1rem;
+}
+
+@media(max-width: 640px) {
+    .metric-wrap {
+        grid-template-columns: 1fr;
     }
-    section[data-testid="stSidebar"] {
-        background: rgba(13, 17, 30, 0.85) !important;
-        backdrop-filter: blur(12px);
-        border-right: 1px solid rgba(0, 242, 254, 0.2);
-    }
-    .cyber-title {
-        font-size: 2.4rem !important;
-        font-weight: 900;
-        text-align: center;
-        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #00c6ff 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 25px rgba(0, 242, 254, 0.4);
-        margin-bottom: 5px;
-    }
-    .cyber-subtitle {
-        text-align: center;
-        color: #88a0c0;
-        font-size: 0.95rem;
-        margin-bottom: 25px;
-        letter-spacing: 1px;
-    }
-    .metrics-container {
-        display: flex;
-        justify-content: space-around;
-        background: rgba(16, 23, 42, 0.6);
-        border: 1px solid rgba(0, 242, 254, 0.25);
-        border-radius: 12px;
-        padding: 10px;
-        margin-bottom: 20px;
-        backdrop-filter: blur(8px);
-    }
-    .metric-value { color: #00f2fe; font-weight: bold; font-size: 0.85rem; text-align: center; }
-    .metric-label { color: #64748b; font-size: 0.75rem; text-align: center; }
-    .privacy-note {
-        font-size: 0.75rem;
-        color: #64748b;
-        text-align: center;
-        margin-top: 5px;
-    }
-    .stButton>button {
-        background: linear-gradient(135deg, rgba(0, 242, 254, 0.1) 0%, rgba(79, 172, 254, 0.1) 100%) !important;
-        color: #00f2fe !important;
-        border: 1px solid rgba(0, 242, 254, 0.4) !important;
-        border-radius: 20px !important;
-        font-weight: 600 !important;
-    }
-    .stButton>button:hover {
-        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
-        color: #000000 !important;
-        box-shadow: 0 0 15px rgba(0, 242, 254, 0.6) !important;
-    }
+}
 </style>
 """, unsafe_allow_html=True)
 
-# 3. إعداد مفتاح API
-API_KEY = st.secrets.get("GEMINI_API_KEY")
-if not API_KEY:
-    st.error("⚠️ لم يتم العثور على مفتاح Gemini API في Streamlit Secrets.")
-    st.stop()
 
-genai.configure(api_key=API_KEY)
-
-# 4. أداة تتبع الطلبات الفورية
-def check_order_status(order_id: str) -> str:
-    database = {
-        "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
-        "ORD-202": "تم تجهيز الطلب وهو في انتظار شركة الشحن 📦",
-        "ORD-303": "تم تسليم الطلب بنجاح. شكراً لتعاملكم معنا! ✅"
-    }
-    clean_id = order_id.strip().upper()
-    if clean_id in database:
-        return f"حالة الطلب {clean_id}: {database[clean_id]}"
-    return f"عذراً، رقم الطلب {clean_id} غير موجود في النظام."
-
-# 5. القائمة الجانبية واللغة
+# إعدادات التحكم
 with st.sidebar:
-    st.markdown("### ⚙️ Control Panel / التحكم")
-    selected_language = st.selectbox(
-        "🌐 Language / اللغة:",
-        ["العربية 🇸🇦", "English 🇬🇧"],
-        key="lang_select"
+    st.markdown("## ⚙️ لوحة التحكم")
+
+    language = st.selectbox(
+        "اللغة / Language",
+        ["العربية", "English"]
     )
+
+    creativity = st.slider(
+        "مستوى الإبداع",
+        0.0, 1.0, 0.4, 0.1
+    )
+
+    model_name = st.selectbox(
+        "نموذج الذكاء الاصطناعي",
+        ["gemini-3.8-flash", "gemini-2.0-flash"]
+    )
+
     st.markdown("---")
-    creativity_level = st.slider("⚡ Temperature / الابتكار:", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
 
-is_arabic = "العربية" in selected_language
-
-if is_arabic:
-    full_instruction = """
-    أنت "رداد" (Raddad Cyber AI)، نظام خدمة العملاء الأكثر تطوراً وذكاءً.
-    مهمتك تقديم إجابات دقيقة، فائقة السرعة، واحترافية باللغة العربية حصراً وبإيجاز مفيد.
-    """
-    welcome_msg = "مرحباً بك في المستقبل! ⚡ أنا **رداد**. يمكنك التحدث معي، الاستعلام عن طلبياتك، أو إرسال صور وصوت مباشرة!"
-else:
-    full_instruction = """
-    You are "Raddad Cyber AI", an advanced, fast AI customer support agent.
-    Provide accurate, lightning-fast, concise, and professional responses in English.
-    """
-    welcome_msg = "Welcome to the future! ⚡ I am **Raddad Cyber AI**. Ask me anything, track orders, or upload media!"
-
-if "current_lang" not in st.session_state or st.session_state.current_lang != selected_language:
-    st.session_state.current_lang = selected_language
-    st.session_state.messages = [{"role": "assistant", "content": welcome_msg}]
-    st.session_state.last_response_time = "جاهز" if is_arabic else "Ready"
-
-# 6. حالة المحرك
-with st.sidebar:
-    st.markdown("### 🤖 Engine Status / حالة المحرك")
-    st.success("● Core Status: ONLINE" if not is_arabic else "● حالة النواة: نشط")
-    st.info("● Model: Gemini 3.8 Flash")
-    st.info("● Mode: Fast Direct Generation")
-    
-    st.markdown("---")
-    if st.button("🗑️ Reset / إعادة ضبط", use_container_width=True):
-        st.session_state.messages = [{"role": "assistant", "content": welcome_msg}]
-        st.session_state.last_response_time = "0.00"
+    if st.button("🧹 محادثة جديدة", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.last_latency = None
         st.rerun()
 
-# 7. تهيئة الموديل
-model = genai.GenerativeModel(
-    model_name="gemini-3.8-flash",
-    system_instruction=full_instruction,
-    generation_config={"temperature": creativity_level}
+is_ar = language == "العربية"
+
+
+# مفتاح API
+try:
+    api_key = st.secrets.get("GEMINI_API_KEY")
+except Exception:
+    api_key = None
+
+api_key = api_key or os.getenv("GEMINI_API_KEY")
+
+if not api_key:
+    st.error("لم يتم العثور على GEMINI_API_KEY. أضفه إلى Secrets.")
+    st.stop()
+
+client = genai.Client(api_key=api_key)
+
+
+# أدوات الوكيل الذكي
+ORDERS = {
+    "ORD-101": "طلبك قيد الشحن حالياً، ومن المتوقع وصوله خلال 48 ساعة.",
+    "ORD-202": "تم تجهيز الطلب وهو بانتظار شركة الشحن.",
+    "ORD-303": "تم تسليم الطلب بنجاح."
+}
+
+
+def check_order_status(order_id: str) -> dict:
+    """التحقق من حالة الطلب باستخدام رقمه."""
+
+    order_id = order_id.strip().upper()
+
+    if order_id in ORDERS:
+        return {
+            "found": True,
+            "order_id": order_id,
+            "status": ORDERS[order_id],
+            "demo": True
+        }
+
+    return {
+        "found": False,
+        "order_id": order_id,
+        "message": "رقم الطلب غير موجود في بيانات العرض التجريبية.",
+        "demo": True
+    }
+
+
+def list_services() -> dict:
+    """عرض الخدمات المتوفرة."""
+
+    return {
+        "services": [
+            "الإجابة عن الأسئلة",
+            "تحليل الصور",
+            "فهم الرسائل الصوتية المدعومة",
+            "تتبع الطلبات التجريبية",
+            "المساعدة التقنية"
+        ]
+    }
+
+
+def create_support_ticket(
+    summary: str,
+    priority: str = "normal"
+) -> dict:
+    """إنشاء مسودة تجريبية لتذكرة دعم."""
+
+    summary = summary.strip()[:500]
+
+    if not summary:
+        return {"created": False, "message": "اكتب وصف المشكلة أولاً."}
+
+    if priority not in ["low", "normal", "high"]:
+        priority = "normal"
+
+    return {
+        "created": True,
+        "ticket_id": f"DEMO-{int(time.time())}",
+        "priority": priority,
+        "summary": summary,
+        "note": "هذه مسودة تجريبية وليست تذكرة مرسلة إلى شركة."
+    }
+
+
+# تعليمات الوكيل
+if is_ar:
+    system_instruction = """
+    أنت رداد، وكيل ذكاء اصطناعي مساعد واحترافي.
+
+    قواعدك:
+    1. أجب باللغة العربية إذا تحدث المستخدم بالعربية.
+    2. كن واضحاً ومختصراً.
+    3. استخدم أداة تتبع الطلبات عندما يسأل المستخدم عن طلب.
+    4. استخدم أداة الخدمات عند السؤال عن الخدمات.
+    5. استخدم أداة الدعم عند طلب إنشاء مسودة تذكرة.
+    6. لا تخترع نتائج الأدوات.
+    7. وضح أن الطلبات وتذاكر الدعم تجريبية.
+    8. حلل الصور المرفقة إذا كانت ذات صلة بالسؤال.
+    9. لا تدّعِ تنفيذ إجراءات خارجية لم تنفذها فعلياً.
+    """
+else:
+    system_instruction = """
+    You are Raddad, a helpful and professional AI agent.
+    Answer clearly and concisely in the user's language.
+    Use tools when appropriate for orders, services, and support drafts.
+    Never invent tool results or claim external actions occurred.
+    Order records and support tickets are demo-only.
+    Analyze attached images when relevant.
+    """
+
+
+# تهيئة سجل المحادثة
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+if "last_latency" not in st.session_state:
+    st.session_state.last_latency = None
+
+
+# العنوان
+title = "RADDAD CYBER AI"
+
+subtitle = (
+    "وكيل ذكاء اصطناعي متعدد الوسائط والخدمات"
+    if is_ar else
+    "Multimodal Artificial Intelligence Agent"
 )
 
-if "last_response_time" not in st.session_state:
-    st.session_state.last_response_time = "جاهز" if is_arabic else "Ready"
-
-# 8. العنوان والمؤشرات
-st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
-subtitle_text = "نظام الذكاء الاصطناعي التفاعلي متعدد الوسائط والخدمات" if is_arabic else "Interactive Multimodal & Fast AI Agent"
-st.markdown(f"<div class='cyber-subtitle'>{subtitle_text}</div>", unsafe_allow_html=True)
-
-latency_unit = "ثانية" if is_arabic else "s"
-latency_val = st.session_state.last_response_time
-latency_display = f"{latency_val} {latency_unit}" if latency_val not in ["جاهز", "Ready"] else latency_val
-
-metric_vision = "وكيل ذكي (مباشر)" if is_arabic else "Fast AI Agent"
-metric_latency = "زمن الاستجابة" if is_arabic else "Latency"
-metric_status = "نشط" if is_arabic else "ONLINE"
-
-st.markdown(f"""
-<div class="metrics-container">
-    <div class="metric-card">
-        <div class="metric-value">{metric_vision}</div>
-        <div class="metric-label">{"المدخلات الذكية" if is_arabic else "Smart Mode"}</div>
+st.markdown(
+    f"""
+    <div class="hero">
+        <h1>{title}</h1>
+        <p>{subtitle}</p>
     </div>
-    <div class="metric-card">
-        <div class="metric-value">{latency_display}</div>
-        <div class="metric-label">{metric_latency}</div>
-    </div>
-    <div class="metric-card">
-        <div class="metric-value">{metric_status}</div>
-        <div class="metric-label">{"حالة النظام" if is_arabic else "System Status"}</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
 
-# 9. عرض الرسائل
+
+# المؤشرات
+latency = st.session_state.last_latency
+
+latency_text = (
+    f"{latency:.2f} ثانية"
+    if is_ar and latency is not None else
+    f"{latency:.2f} s"
+    if latency is not None else
+    "جاهز"
+    if is_ar else
+    "Ready"
+)
+
+st.markdown(
+    f"""
+    <div class="metric-wrap">
+        <div class="metric">
+            <b>{"وكيل ذكي" if is_ar else "AI Agent"}</b>
+            <span>{"استخدام الأدوات" if is_ar else "Tool calling"}</span>
+        </div>
+        <div class="metric">
+            <b>{latency_text}</b>
+            <span>{"زمن الاستجابة" if is_ar else "Response time"}</span>
+        </div>
+        <div class="metric">
+            <b>{"نشط" if is_ar else "ONLINE"}</b>
+            <span>{"حالة النظام" if is_ar else "System status"}</span>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# عرض المحادثة السابقة
 for msg in st.session_state.messages:
-    avatar = "⚡" if msg["role"] == "assistant" else "👤"
-    with st.chat_message(msg["role"], avatar=avatar):
-        st.write(msg["content"])
+    with st.chat_message(
+        msg["role"],
+        avatar="⚡" if msg["role"] == "assistant" else "👤"
+    ):
+        st.markdown(msg["content"])
 
-# 10. الأزرار السريعة
-st.markdown("##### 🚀 اختصارات سريعة:" if is_arabic else "##### 🚀 Quick Shortcuts:")
-col1, col2 = st.columns(2)
-col3, col4 = st.columns(2)
 
-prompt_shortcut = None
-with col1:
-    btn_txt = "📦 تتبع ORD-101" if is_arabic else "📦 Track ORD-101"
-    if st.button(btn_txt, use_container_width=True):
-        prompt_shortcut = "ما هي حالة الطلب رقم ORD-101؟" if is_arabic else "What is the status of order ORD-101?"
-with col2:
-    btn_txt = "📦 تتبع ORD-202" if is_arabic else "📦 Track ORD-202"
-    if st.button(btn_txt, use_container_width=True):
-        prompt_shortcut = "أريد معرفة حالة طلبي ORD-202" if is_arabic else "I want to check order ORD-202"
-with col3:
-    btn_txt = "💡 الخدمات" if is_arabic else "💡 Services"
-    if st.button(btn_txt, use_container_width=True):
-        prompt_shortcut = "ما هي الخدمات والتسهيلات التي تقدمها؟" if is_arabic else "What services do you provide?"
-with col4:
-    btn_txt = "🛠️ الدعم" if is_arabic else "🛠️ Support"
-    if st.button(btn_txt, use_container_width=True):
-        prompt_shortcut = "أحتاج لمساعدة في حل مشكلة تقنية." if is_arabic else "I need help with a technical issue."
+# الاختصارات
+st.markdown("#### 🚀 اختصارات سريعة")
 
-# 11. الوسائط المتعددة (صور / كاميرا / صوت)
-st.markdown("---")
-tab_titles = ["📁 صورة", "📸 كاميرا", "🎙️ صوت"] if is_arabic else ["📁 Image", "📸 Camera", "🎙️ Voice"]
-tab_upload, tab_camera, tab_audio = st.tabs(tab_titles)
+c1, c2, c3, c4 = st.columns(4)
 
-image_object = None
-audio_file_object = None
+quick_prompt = None
 
-with tab_upload:
-    uploaded_file = st.file_uploader("اختر صورة:" if is_arabic else "Select Image:", type=["jpg", "jpeg", "png"])
-    if uploaded_file:
-        image_object = Image.open(uploaded_file)
-        st.image(image_object, caption="الصورة" if is_arabic else "Uploaded Image", use_container_width=True)
+with c1:
+    if st.button("📦 تتبع ORD-101", use_container_width=True):
+        quick_prompt = "تحقق من حالة الطلب ORD-101"
 
-with tab_camera:
-    camera_photo = st.camera_input("صورة بالكاميرا:" if is_arabic else "Camera Capture:")
-    if camera_photo:
-        image_object = Image.open(camera_photo)
-        st.image(image_object, caption="اللقطة الحية" if is_arabic else "Captured Photo", use_container_width=True)
+with c2:
+    if st.button("📦 تتبع ORD-202", use_container_width=True):
+        quick_prompt = "تحقق من حالة الطلب ORD-202"
 
-with tab_audio:
-    st.markdown("سجل صوتك:" if is_arabic else "Record Voice:")
-    audio_data = st.audio_input("تسجيل صوتي" if is_arabic else "Audio Input")
-    if audio_data:
-        audio_file_object = audio_data
-        st.success("✅ تم التسجيل!" if is_arabic else "✅ Recorded!")
+with c3:
+    if st.button("💡 الخدمات", use_container_width=True):
+        quick_prompt = "ما الخدمات المتوفرة؟"
 
-privacy_msg = "🔒 البيانات المعالجة لا يتم حفظها على السيرفر لضمان الخصوصية." if is_arabic else "🔒 Uploaded data processed privately and not stored."
-st.markdown(f"<div class='privacy-note'>{privacy_msg}</div>", unsafe_allow_html=True)
+with c4:
+    if st.button("🛠️ الدعم", use_container_width=True):
+        quick_prompt = "ساعدني بإنشاء مسودة تذكرة دعم لمشكلة تقنية."
 
-# 12. استقبال المعالجة والتوليد السريع
-chat_placeholder = "اكتب استفسارك أو رقم الطلب (مثل ORD-101)..." if is_arabic else "Type your prompt or order ID..."
-user_input = st.chat_input(chat_placeholder)
 
-if prompt_shortcut:
-    user_input = prompt_shortcut
+# رفع الصور والصوت
+with st.expander("📎 إرفاق صورة أو ملف صوتي"):
 
-if user_input or audio_file_object:
-    display_text = user_input if user_input else ("🎤 [رسالة صوتية مرسلة]" if is_arabic else "🎤 [Audio Message Sent]")
-    
+    uploaded_image = st.file_uploader(
+        "اختر صورة",
+        type=["png", "jpg", "jpeg", "webp"]
+    )
+
+    image_data = None
+
+    if uploaded_image:
+        try:
+            image_data = Image.open(uploaded_image).convert("RGB")
+            st.image(image_data, use_container_width=True)
+        except Exception:
+            st.warning("تعذر فتح الصورة.")
+
+    audio_file = st.file_uploader(
+        "اختر ملفاً صوتياً",
+        type=["wav", "mp3", "m4a"]
+    )
+
+    if audio_file:
+        st.audio(audio_file)
+
+
+# استقبال الرسالة
+placeholder = (
+    "اكتب سؤالك أو رقم الطلب مثل ORD-101..."
+    if is_ar else
+    "Ask a question or enter an order ID..."
+)
+
+typed_prompt = st.chat_input(placeholder)
+
+prompt = quick_prompt or typed_prompt
+
+
+# تنفيذ الطلب
+if prompt:
+
+    st.session_state.messages.append({
+        "role": "user",
+        "content": prompt
+    })
+
     with st.chat_message("user", avatar="👤"):
-        st.write(display_text)
-        if audio_file_object:
-            st.audio(audio_file_object)
-            
-    st.session_state.messages.append({"role": "user", "content": display_text})
+        st.markdown(prompt)
+
+    # إرسال آخر الرسائل فقط لتقليل حجم السياق
+    recent_messages = st.session_state.messages[-12:]
+
+    contents = []
+
+    for message in recent_messages:
+        role = (
+            "user"
+            if message["role"] == "user"
+            else "model"
+        )
+
+        contents.append(
+            types.Content(
+                role=role,
+                parts=[
+                    types.Part.from_text(
+                        text=message["content"]
+                    )
+                ]
+            )
+        )
+
+    # إرفاق الوسائط بالرسالة الحالية
+    if image_data is not None or audio_file is not None:
+
+        parts = [types.Part.from_text(text=prompt)]
+
+        if image_data is not None:
+            image_buffer = BytesIO()
+
+            image_data.save(
+                image_buffer,
+                format="JPEG",
+                quality=85
+            )
+
+            parts.append(
+                types.Part.from_bytes(
+                    data=image_buffer.getvalue(),
+                    mime_type="image/jpeg"
+                )
+            )
+
+        if audio_file is not None:
+            parts.append(
+                types.Part.from_bytes(
+                    data=audio_file.getvalue(),
+                    mime_type=audio_file.type or "audio/wav"
+                )
+            )
+
+        contents[-1] = types.Content(
+            role="user",
+            parts=parts
+        )
 
     with st.chat_message("assistant", avatar="⚡"):
-        spinner_msg = "⚡ جاري المعالجة..." if is_arabic else "⚡ Processing..."
-        with st.spinner(spinner_msg):
+
+        with st.spinner(
+            "رداد يفكر..." if is_ar else "Raddad is thinking..."
+        ):
+
+            start_time = time.perf_counter()
+
             try:
-                start_time = time.time()
-                
-                tool_output = None
-                if user_input:
-                    for code in ["ORD-101", "ORD-202", "ORD-303"]:
-                        if code in user_input.upper():
-                            tool_output = check_order_status(code)
-                            break
-                
-                content_payload = []
-                if tool_output:
-                    prompt_final = f"نتيجة فحص نظام الطلبات: '{tool_output}'. صغ للعميل رداً مختصراً واحترافياً بنفس لغته."
-                    content_payload.append(prompt_final)
+
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=creativity,
+                        max_output_tokens=900,
+                        tools=[
+                            check_order_status,
+                            list_services,
+                            create_support_ticket
+                        ]
+                    )
+                )
+
+                answer = (response.text or "").strip()
+
+                if not answer:
+                    answer = (
+                        "لم أتمكن من إنشاء إجابة. حاول مرة أخرى."
+                        if is_ar else
+                        "I couldn't generate an answer. Please try again."
+                    )
+
+                st.session_state.last_latency = (
+                    time.perf_counter() - start_time
+                )
+
+                st.markdown(answer)
+
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": answer
+                })
+
+            except Exception as error:
+
+                error_text = str(error).lower()
+
+                if "429" in error_text or "quota" in error_text:
+                    answer = (
+                        "وصلت إلى حد استخدام API. حاول لاحقاً."
+                        if is_ar else
+                        "API quota reached. Please try later."
+                    )
+
+                elif "404" in error_text or "not found" in error_text:
+                    answer = (
+                        "النموذج غير متاح لمفتاحك. اختر نموذجاً آخر."
+                        if is_ar else
+                        "The model is unavailable. Choose another model."
+                    )
+
                 else:
-                    if user_input:
-                        content_payload.append(user_input)
-                    else:
-                        default_prompt = "الرجاء الاستماع لهذه الرسالة الصوتية والإجابة عليها بشكل أسرع ولطيف:"
-                        content_payload.append(default_prompt)
+                    answer = (
+                        "حدث خطأ أثناء الاتصال. تحقق من مفتاح API والإنترنت."
+                        if is_ar else
+                        "Connection error. Check your API key and internet."
+                    )
 
-                if image_object:
-                    content_payload.append(image_object)
-                
-                if audio_file_object:
-                    audio_bytes = audio_file_object.getvalue()
-                    content_payload.append({
-                        "mime_type": "audio/wav",
-                        "data": audio_bytes
-                    })
+                st.error(answer)
 
-                response = model.generate_content(content_payload)
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": answer
+                })
 
-                elapsed_time = time.time() - start_time
-                st.session_state.last_response_time = f"{elapsed_time:.2f}"
 
-                bot_reply = response.text
-                st.write(bot_reply)
-                st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-
-            except Exception as e:
-                error_message = str(e)
-                if "429" in error_message or "quota" in error_message.lower():
-                    st.warning("⚠️ عذراً، تم الوصول للحد الأقصى للتجارب المجانية اليومية." if is_arabic else "⚠️ Quota limit reached.")
-                else:
-                    st.error(f"⚠️ حدث خطأ: {error_message}")
+st.markdown(
+    '<div class="small-note">🔐 حافظ على سرية مفتاح API ولا ترفعه إلى GitHub.</div>',
+    unsafe_allow_html=True
+)
+```
