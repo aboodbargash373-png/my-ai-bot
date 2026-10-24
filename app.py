@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. تصميم الواجهة الاحترافي المطور (Cyberpunk Dark Mode & Glassmorphism)
+# 2. تصميم الواجهة الاحترافي (Cyberpunk Dark Mode)
 st.markdown("""
 <style>
     .stApp {
@@ -157,7 +157,7 @@ with st.sidebar:
     st.markdown("### 🤖 Engine Status / حالة المحرك")
     st.success("● Core Status: ACTIVE" if not is_arabic else "● حالة النواة: نشط")
     st.info("● Model: Gemini 3.8 Flash")
-    st.info("● Mode: Lightning-Fast Agent")
+    st.info("● Mode: Streaming Fast Response")
     
     st.markdown("---")
     if st.button("🗑️ Reset Chat / إعادة ضبط", use_container_width=True):
@@ -175,7 +175,7 @@ model = genai.GenerativeModel(
 if "last_response_time" not in st.session_state:
     st.session_state.last_response_time = "جاهز" if is_arabic else "Ready"
 
-# 8. العنوان والمؤشرات الاحترافية
+# 8. العنوان والمؤشرات
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
 st.markdown(f"<div class='cyber-subtitle'>{subtitle_text}</div>", unsafe_allow_html=True)
 
@@ -252,7 +252,7 @@ with tab_audio:
 
 st.markdown(f"<div class='privacy-note'>{privacy_msg}</div>", unsafe_allow_html=True)
 
-# 12. استقبال المعالجة والتوليد الفائق السرعة
+# 12. استقبال المعالجة والبث التدفقي المباشر (Streaming Response)
 user_input = st.chat_input(chat_placeholder)
 
 if prompt_shortcut:
@@ -269,52 +269,55 @@ if user_input or audio_file_object:
     st.session_state.messages.append({"role": "user", "content": display_text})
 
     with st.chat_message("assistant", avatar="⚡"):
-        spinner_msg = "⚡ جاري المعالجة الفورية..." if is_arabic else "⚡ Processing instantly..."
-        with st.spinner(spinner_msg):
-            try:
-                start_time = time.time()
-                
-                # فحص سريع لطلبات الشحن والتتبع
-                tool_output = None
-                if user_input:
-                    for code in ["ORD-101", "ORD-202", "ORD-303"]:
-                        if code in user_input.upper():
-                            tool_output = check_order_status(code)
-                            break
-                
-                content_payload = []
-                if tool_output:
-                    prompt_final = f"نتيجة فحص نظام الطلبات: '{tool_output}'. صغ للعميل رداً مختصراً واحترافياً بنفس لغته."
-                    content_payload.append(prompt_final)
-                else:
-                    if user_input:
-                        content_payload.append(user_input)
-                    else:
-                        default_prompt = "الرجاء الاستماع لهذه الرسالة الصوتية والإجابة عليها بشكل أسرع ولطيف:" if is_arabic else "Please listen to this audio message and respond:"
-                        content_payload.append(default_prompt)
+        start_time = time.time()
+        
+        # فحص سريع لطلبات الشحن
+        tool_output = None
+        if user_input:
+            for code in ["ORD-101", "ORD-202", "ORD-303"]:
+                if code in user_input.upper():
+                    tool_output = check_order_status(code)
+                    break
+        
+        content_payload = []
+        if tool_output:
+            prompt_final = f"نتيجة فحص نظام الطلبات: '{tool_output}'. صغ للعميل رداً مختصراً واحترافياً بنفس لغته."
+            content_payload.append(prompt_final)
+        else:
+            if user_input:
+                content_payload.append(user_input)
+            else:
+                default_prompt = "الرجاء الاستماع لهذه الرسالة الصوتية والإجابة عليها بشكل أسرع ولطيف:" if is_arabic else "Please listen to this audio message and respond:"
+                content_payload.append(default_prompt)
 
-                if image_object:
-                    content_payload.append(image_object)
-                
-                if audio_file_object:
-                    audio_bytes = audio_file_object.getvalue()
-                    content_payload.append({
-                        "mime_type": "audio/wav",
-                        "data": audio_bytes
-                    })
+        if image_object:
+            content_payload.append(image_object)
+        
+        if audio_file_object:
+            audio_bytes = audio_file_object.getvalue()
+            content_payload.append({
+                "mime_type": "audio/wav",
+                "data": audio_bytes
+            })
 
-                response = model.generate_content(content_payload)
+        try:
+            # تفعيل البث المباشر (stream=True) لكتابة النص فوراً دون انتظار
+            response_stream = model.generate_content(content_payload, stream=True)
+            
+            def stream_generator():
+                for chunk in response_stream:
+                    if chunk.text:
+                        yield chunk.text
 
-                elapsed_time = time.time() - start_time
-                st.session_state.last_response_time = f"{elapsed_time:.2f}"
+            full_response = st.write_stream(stream_generator)
 
-                bot_reply = response.text
-                st.write(bot_reply)
-                st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+            elapsed_time = time.time() - start_time
+            st.session_state.last_response_time = f"{elapsed_time:.2f}"
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-            except Exception as e:
-                error_message = str(e)
-                if "429" in error_message or "quota" in error_message.lower():
-                    st.warning("⚠️ عذراً، تم الوصول للحد الأقصى للتجارب المجانية اليومية." if is_arabic else "⚠️ Quota limit reached.")
-                else:
-                    st.error(f"⚠️ حدث خطأ تقني: {error_message}")
+        except Exception as e:
+            error_message = str(e)
+            if "429" in error_message or "quota" in error_message.lower():
+                st.warning("⚠️ عذراً، تم الوصول للحد الأقصى للتجارب المجانية اليومية." if is_arabic else "⚠️ Quota limit reached.")
+            else:
+                st.error(f"⚠️ حدث خطأ تقني: {error_message}")
