@@ -1,978 +1,904 @@
 import os
-import io
 import json
 import time
 import uuid
-import html
-from datetime import datetime
 
 import streamlit as st
 import streamlit.components.v1 as components
 from google import genai
 from google.genai import types
-from PIL import Image
 
-# =====================================================
 
+# ==========================================
 # 1. إعدادات التطبيق
-
-# =====================================================
+# ==========================================
 
 st.set_page_config(
-page_title="RADDAD CYBER AI",
-page_icon="⚡",
-layout="wide",
-initial_sidebar_state="expanded"
+    page_title="RADDAD CYBER AI",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 MODEL_NAME = "gemini-3.8-flash"
-MAX_HISTORY = 20
+MAX_HISTORY = 12
 
-# =====================================================
 
-# 2. النصوص متعددة اللغات
+# ==========================================
+# 2. اللغات
+# ==========================================
 
-# =====================================================
+TEXTS = {
+    "العربية": {
+        "subtitle": "وكيلك الذكي — متعدد الوسائط وسهل الاستخدام",
+        "settings": "الإعدادات",
+        "language": "اللغة",
+        "theme": "المظهر",
+        "dark": "داكن",
+        "light": "فاتح",
+        "thinking": "مستوى التفكير",
+        "status": "حالة المحرك",
+        "new": "محادثة جديدة",
+        "clear": "مسح المحادثة",
+        "export": "تصدير المحادثة",
+        "shortcuts": "اختصارات سريعة",
+        "track1": "📦 تتبع ORD-101",
+        "track2": "📦 تتبع ORD-202",
+        "services": "💡 الخدمات",
+        "support": "🛠️ الدعم الفني",
+        "files": "📁 الملفات",
+        "camera": "📸 الكاميرا",
+        "voice": "🎙️ الصوت",
+        "file_hint": "ارفع صورة أو PDF أو ملف صوتي",
+        "camera_hint": "التقط صورة بالكاميرا",
+        "voice_hint": "سجّل رسالتك الصوتية",
+        "placeholder": "اكتب رسالتك هنا...",
+        "welcome": "أهلًا! أنا رداد ⚡ كيف بقدر أساعدك؟",
+        "waiting": "رداد يفكر...",
+        "missing_key": "مفتاح Gemini API غير موجود. أضفه في Secrets.",
+        "api_error": "تعذر الاتصال بـ Gemini. افتح التفاصيل التقنية لمعرفة السبب.",
+        "latency": "زمن الرد",
+        "read": "🔊 استمع للرد",
+        "privacy": "المحادثة لا تُحفظ في قاعدة بيانات خارجية.",
+        "services_answer": (
+            "الخدمات المتاحة:\n"
+            "• الإجابة عن الأسئلة\n"
+            "• تحليل الصور والملفات والصوت\n"
+            "• تتبع الطلبات التجريبية\n"
+            "• المساعدة في المشاكل التقنية"
+        ),
+        "demo": "ملاحظة: بيانات الطلبات تجريبية وغير متصلة بنظام حقيقي.",
+        "support_prompt": "أحتاج إلى مساعدة في مشكلة تقنية.",
+        "file_error": "تعذر التعامل مع الملف",
+        "empty": "اكتب رسالة أو أرفق ملفًا.",
+    },
 
-TEXT = {
-"العربية": {
-"subtitle": "وكيلك الذكي — أسرع، أذكى، وأسهل",
-"settings": "⚙️ الإعدادات",
-"language": "🌐 اللغة",
-"theme": "🎨 المظهر",
-"dark": "داكن",
-"light": "فاتح",
-"creativity": "مستوى الإبداع",
-"engine": "🤖 حالة المحرك",
-"online": "متصل بالإعدادات",
-"new_chat": "➕ محادثة جديدة",
-"export": "📥 تصدير المحادثة",
-"reset": "🗑️ مسح المحادثة",
-"shortcuts": "⚡ اختصارات سريعة",
-"track1": "📦 تتبع ORD-101",
-"track2": "📦 تتبع ORD-202",
-"services": "💡 الخدمات",
-"support": "🛠️ الدعم الفني",
-"upload": "📁 الملفات",
-"camera": "📸 الكاميرا",
-"voice": "🎙️ الصوت",
-"choose_file": "اختر صورة أو ملف PDF أو ملف صوتي",
-"camera_text": "التقط صورة",
-"record": "سجّل رسالتك الصوتية",
-"chat_placeholder": "اكتب رسالتك هنا...",
-"welcome": "أهلًا! أنا رداد ⚡ كيف بقدر أساعدك اليوم؟",
-"thinking": "⚡ رداد يفكر...",
-"error_key": "مفتاح Gemini API غير موجود. أضفه في Secrets.",
-"error_model": "تعذر الاتصال بـ Gemini. تحقق من المفتاح وسجلات التطبيق.",
-"status": "جاهز",
-"latency": "زمن الرد",
-"assistant": "رداد",
-"user": "أنت",
-"read": "🔊 اقرأ آخر رد",
-"copy_note": "يمكنك نسخ الرد من قائمة الرسالة.",
-"download": "تنزيل المحادثة",
-"privacy": "🔒 لا يحفظ هذا الإصدار المحادثات في قاعدة بيانات خارجية.",
-"services_answer": "الخدمات المتاحة:\n• المساعدة والإجابة عن الأسئلة\n• تحليل الصور والملفات المدعومة\n• الاستعلام التجريبي عن الطلبات\n• إنشاء تذاكر دعم تجريبية",
-"ticket": "تم إنشاء تذكرة دعم تجريبية:",
-"not_found": "رقم الطلب غير موجود في بيانات الطلبات التجريبية.",
-"invalid_file": "تعذر قراءة الملف:",
-"empty": "اكتب رسالة أو أرفق ملفًا ثم أرسل الطلب.",
-"send": "إرسال",
-},
-"English": {
-"subtitle": "Your intelligent assistant — faster, smarter, simpler",
-"settings": "⚙️ Settings",
-"language": "🌐 Language",
-"theme": "🎨 Appearance",
-"dark": "Dark",
-"light": "Light",
-"creativity": "Creativity",
-"engine": "🤖 Engine status",
-"online": "Configuration loaded",
-"new_chat": "➕ New chat",
-"export": "📥 Export conversation",
-"reset": "🗑️ Clear conversation",
-"shortcuts": "⚡ Quick actions",
-"track1": "📦 Track ORD-101",
-"track2": "📦 Track ORD-202",
-"services": "💡 Services",
-"support": "🛠️ Support",
-"upload": "📁 Files",
-"camera": "📸 Camera",
-"voice": "🎙️ Voice",
-"choose_file": "Choose an image, PDF, or audio file",
-"camera_text": "Take a picture",
-"record": "Record your voice message",
-"chat_placeholder": "Type your message here...",
-"welcome": "Welcome! I'm Raddad ⚡ How can I help you today?",
-"thinking": "⚡ Raddad is thinking...",
-"error_key": "Gemini API key is missing. Add it to Secrets.",
-"error_model": "Could not connect to Gemini. Check your key and app logs.",
-"status": "Ready",
-"latency": "Response time",
-"assistant": "Raddad",
-"user": "You",
-"read": "🔊 Read latest response",
-"copy_note": "You can copy a response from its message menu.",
-"download": "Download conversation",
-"privacy": "🔒 This version does not save conversations to an external database.",
-"services_answer": "Available services:\n• General assistance and questions\n• Supported image and file analysis\n• Demo order tracking\n• Demo support tickets",
-"ticket": "Demo support ticket created:",
-"not_found": "That order ID was not found in the demo order data.",
-"invalid_file": "Could not read file:",
-"empty": "Write a message or attach a file before sending.",
-"send": "Send",
-},
+    "English": {
+        "subtitle": "Your intelligent multimodal assistant",
+        "settings": "Settings",
+        "language": "Language",
+        "theme": "Appearance",
+        "dark": "Dark",
+        "light": "Light",
+        "thinking": "Reasoning level",
+        "status": "Engine status",
+        "new": "New conversation",
+        "clear": "Clear conversation",
+        "export": "Export conversation",
+        "shortcuts": "Quick actions",
+        "track1": "📦 Track ORD-101",
+        "track2": "📦 Track ORD-202",
+        "services": "💡 Services",
+        "support": "🛠️ Support",
+        "files": "📁 Files",
+        "camera": "📸 Camera",
+        "voice": "🎙️ Voice",
+        "file_hint": "Upload an image, PDF, or audio file",
+        "camera_hint": "Take a picture",
+        "voice_hint": "Record a voice message",
+        "placeholder": "Type your message here...",
+        "welcome": "Welcome! I'm Raddad ⚡ How can I help?",
+        "waiting": "Raddad is thinking...",
+        "missing_key": "Gemini API key is missing. Add it to Secrets.",
+        "api_error": "Gemini connection failed. Open technical details.",
+        "latency": "Response time",
+        "read": "🔊 Read response aloud",
+        "privacy": "Chats are not saved to an external database.",
+        "services_answer": (
+            "Available services:\n"
+            "• General questions\n"
+            "• Image, file, and audio analysis\n"
+            "• Demo order tracking\n"
+            "• Technical assistance"
+        ),
+        "demo": "Note: order data is demo data, not connected to a real system.",
+        "support_prompt": "I need help with a technical issue.",
+        "file_error": "Could not process file",
+        "empty": "Write a message or attach a file.",
+    },
 }
 
-# =====================================================
 
-# 3. إعداد الحالة
+# ==========================================
+# 3. بيانات الجلسة
+# ==========================================
 
-# =====================================================
+def init_state(key, value):
+    if key not in st.session_state:
+        st.session_state[key] = value
 
-if "language" not in st.session_state:
-st.session_state.language = "العربية"
 
-if "theme" not in st.session_state:
-st.session_state.theme = "Dark"
+init_state("language", "العربية")
+init_state("theme", "Dark")
+init_state("messages", [])
+init_state("last_latency", None)
+init_state("pending_prompt", "")
+init_state("upload_version", 0)
 
-if "messages" not in st.session_state:
-st.session_state.messages = []
 
-if "last_answer" not in st.session_state:
-st.session_state.last_answer = ""
+# ==========================================
+# 4. التصميم
+# ==========================================
 
-if "last_latency" not in st.session_state:
-st.session_state.last_latency = None
+dark = st.session_state.theme == "Dark"
 
-if "pending_prompt" not in st.session_state:
-st.session_state.pending_prompt = ""
-
-if "uploaded_version" not in st.session_state:
-st.session_state.uploaded_version = 0
-
-if "request_id" not in st.session_state:
-st.session_state.request_id = 0
-
-# =====================================================
-
-# 4. الألوان والتصميم
-
-# =====================================================
-
-dark_mode = st.session_state.theme == "Dark"
-
-if dark_mode:
-BG = "#07111F"
-PANEL = "#0D1B2D"
-CARD = "#10243A"
-TEXT_COLOR = "#E5EDF7"
-MUTED = "#9BAFC7"
-BORDER = "#203A57"
-ACCENT = "#45B8FF"
-INPUT_BG = "#0D1B2D"
+if dark:
+    bg = "#07111F"
+    panel = "#0D1B2D"
+    card = "#10243A"
+    fg = "#E5EDF7"
+    muted = "#9BAFC7"
+    border = "#203A57"
+    accent = "#45B8FF"
 else:
-BG = "#F2F6FC"
-PANEL = "#FFFFFF"
-CARD = "#E8F1FC"
-TEXT_COLOR = "#15243A"
-MUTED = "#526780"
-BORDER = "#D2DFEF"
-ACCENT = "#087BC1"
-INPUT_BG = "#FFFFFF"
+    bg = "#F2F6FC"
+    panel = "#FFFFFF"
+    card = "#E8F1FC"
+    fg = "#15243A"
+    muted = "#526780"
+    border = "#D2DFEF"
+    accent = "#087BC1"
 
-direction = "rtl" if st.session_state.language == "العربية" else "ltr"
-alignment = "right" if direction == "rtl" else "left"
+rtl = st.session_state.language == "العربية"
+direction = "rtl" if rtl else "ltr"
+alignment = "right" if rtl else "left"
 
 st.markdown(
-f""" <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
+    f"""
+    <style>
+    @import url(
+      'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap'
+    );
 
-```
-:root {{
-    color-scheme: {"dark" if dark_mode else "light"};
-}}
+    html, body, [class*="css"] {{
+        font-family: 'Cairo', sans-serif;
+    }}
 
-html, body, [class*="css"] {{
-    font-family: 'Cairo', sans-serif;
-}}
+    .stApp {{
+        background: {bg};
+        color: {fg};
+    }}
 
-.stApp {{
-    background: {BG};
-    color: {TEXT_COLOR};
-}}
+    [data-testid="stHeader"] {{
+        background: transparent;
+    }}
 
-[data-testid="stHeader"] {{
-    background: transparent;
-}}
+    .block-container {{
+        max-width: 1250px;
+        padding-top: 1.5rem;
+        padding-bottom: 2rem;
+    }}
 
-.block-container {{
-    max-width: 1250px;
-    padding-top: 1.5rem;
-    padding-bottom: 2rem;
-}}
+    section[data-testid="stSidebar"] {{
+        background: {panel};
+        border-right: 1px solid {border};
+    }}
 
-section[data-testid="stSidebar"] {{
-    background: {PANEL};
-    border-right: 1px solid {BORDER};
-}}
+    .hero {{
+        padding: 28px;
+        border-radius: 22px;
+        border: 1px solid {border};
+        background: linear-gradient(135deg, {panel}, {card});
+        margin-bottom: 20px;
+        direction: {direction};
+        text-align: {alignment};
+    }}
 
-.hero {{
-    padding: 30px 25px;
-    border-radius: 24px;
-    border: 1px solid {BORDER};
-    background: linear-gradient(135deg, {PANEL}, {CARD});
-    margin-bottom: 20px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-    direction: {direction};
-    text-align: {alignment};
-}}
+    .hero h1 {{
+        color: {accent};
+        font-size: clamp(26px, 4vw, 42px);
+        font-weight: 800;
+        margin: 0;
+    }}
 
-.hero h1 {{
-    color: {ACCENT};
-    font-size: clamp(26px, 4vw, 42px);
-    font-weight: 800;
-    margin: 0;
-    letter-spacing: 0.5px;
-}}
+    .hero p {{
+        color: {muted};
+        margin-top: 10px;
+    }}
 
-.hero p {{
-    color: {MUTED};
-    font-size: 15px;
-    margin-top: 10px;
-    margin-bottom: 0;
-}}
+    .badge {{
+        display: inline-block;
+        padding: 5px 12px;
+        border: 1px solid {border};
+        border-radius: 50px;
+        color: {accent};
+        font-size: 12px;
+        margin-top: 10px;
+    }}
 
-.badge {{
-    display: inline-block;
-    padding: 5px 12px;
-    border: 1px solid {BORDER};
-    border-radius: 50px;
-    color: {ACCENT};
-    font-size: 12px;
-    margin-top: 15px;
-}}
+    .metric {{
+        background: {panel};
+        border: 1px solid {border};
+        padding: 14px;
+        border-radius: 15px;
+        text-align: center;
+        min-height: 78px;
+    }}
 
-.metric {{
-    background: {PANEL};
-    border: 1px solid {BORDER};
-    padding: 15px;
-    border-radius: 16px;
-    text-align: center;
-    min-height: 85px;
-}}
+    .metric-value {{
+        color: {accent};
+        font-size: 18px;
+        font-weight: 800;
+    }}
 
-.metric-value {{
-    color: {ACCENT};
-    font-size: 19px;
-    font-weight: 800;
-}}
+    .metric-label {{
+        color: {muted};
+        font-size: 12px;
+        margin-top: 4px;
+    }}
 
-.metric-label {{
-    color: {MUTED};
-    font-size: 12px;
-    margin-top: 4px;
-}}
+    div[data-testid="stChatMessage"] {{
+        background: {panel};
+        border: 1px solid {border};
+        border-radius: 16px;
+        padding: 12px;
+        margin-bottom: 10px;
+    }}
 
-div[data-testid="stChatMessage"] {{
-    background: {PANEL};
-    border: 1px solid {BORDER};
-    border-radius: 16px;
-    padding: 12px;
-    margin-bottom: 12px;
-}}
+    .stButton button {{
+        border-radius: 12px;
+        border: 1px solid {border};
+        min-height: 42px;
+    }}
 
-.stButton button {{
-    border-radius: 12px;
-    border: 1px solid {BORDER};
-    min-height: 42px;
-    transition: all 0.2s ease;
-}}
+    .stButton button:hover {{
+        border-color: {accent};
+        color: {accent};
+    }}
 
-.stButton button:hover {{
-    border-color: {ACCENT};
-    color: {ACCENT};
-}}
+    .stTabs [data-baseweb="tab"] {{
+        border-radius: 10px;
+        padding: 9px 12px;
+    }}
 
-div[data-testid="stChatInput"] {{
-    border-color: {BORDER};
-}}
-
-.note {{
-    text-align: center;
-    font-size: 12px;
-    color: {MUTED};
-    padding: 12px 0;
-}}
-
-[data-testid="stMarkdownContainer"] {{
-    color: {TEXT_COLOR};
-}}
-
-.stTabs [data-baseweb="tab-list"] {{
-    gap: 8px;
-}}
-
-.stTabs [data-baseweb="tab"] {{
-    border-radius: 10px;
-    padding: 10px 14px;
-}}
-</style>
-""",
-unsafe_allow_html=True
-```
-
+    .small-note {{
+        text-align: center;
+        color: {muted};
+        font-size: 12px;
+        padding: 12px 0;
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
-# =====================================================
 
-# 5. مفتاح API والاتصال
+# ==========================================
+# 5. مفتاح API
+# ==========================================
 
-# =====================================================
-
-api_key = os.getenv("GEMINI_API_KEY", "")
+API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 try:
-if not api_key:
-api_key = st.secrets.get("GEMINI_API_KEY", "")
+    if not API_KEY:
+        API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 except Exception:
-pass
+    pass
+
 
 @st.cache_resource(show_spinner=False)
 def get_client(key):
-return genai.Client(api_key=key)
+    return genai.Client(api_key=key)
 
-# =====================================================
 
-# 6. أدوات الوكيل الذكي
+# ==========================================
+# 6. الطلبات التجريبية
+# ==========================================
 
-# =====================================================
-
-def check_order_status(order_id):
-database = {
-"ORD-101": "طلبك قيد الشحن حاليًا، والموعد التجريبي المتوقع خلال 48 ساعة.",
-"ORD-202": "تم تجهيز الطلب وهو بانتظار شركة الشحن.",
-"ORD-303": "تم تسليم الطلب بنجاح.",
+ORDERS = {
+    "ORD-101": {
+        "ar": "طلبك قيد الشحن. الموعد التجريبي المتوقع خلال 48 ساعة.",
+        "en": "Your order is shipping. Demo ETA: 48 hours.",
+    },
+    "ORD-202": {
+        "ar": "تم تجهيز الطلب وهو بانتظار شركة الشحن.",
+        "en": "Your order is prepared and waiting for shipping.",
+    },
+    "ORD-303": {
+        "ar": "تم تسليم الطلب بنجاح.",
+        "en": "Your order was delivered successfully.",
+    },
 }
 
-```
-order_id = order_id.strip().upper()
 
-if order_id in database:
-    return f"{order_id}: {database[order_id]}"
+def local_action(prompt, language):
+    upper = prompt.upper()
+    lower = prompt.lower()
 
-return None
-```
+    for order_id, data in ORDERS.items():
+        if order_id in upper:
+            key = "ar" if language == "العربية" else "en"
+            return (
+                f"{order_id}: {data[key]}\n\n"
+                f"{TEXTS[language]['demo']}"
+            )
 
-def create_demo_ticket(issue):
-ticket_id = "RAD-" + uuid.uuid4().hex[:8].upper()
+    service_terms = [
+        "الخدمات",
+        "خدماتكم",
+        "شو بتقدم",
+        "ماذا تقدم",
+        "services",
+        "what can you do",
+    ]
 
-```
-return (
-    f"رقم التذكرة: {ticket_id}\n"
-    f"المشكلة: {issue}\n"
-    f"وقت الإنشاء: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
-    "هذه تذكرة تجريبية غير محفوظة في قاعدة بيانات."
-)
-```
+    if any(term in lower for term in service_terms):
+        return TEXTS[language]["services_answer"]
 
-def detect_quick_action(prompt, language):
-upper_prompt = prompt.upper()
+    return None
 
-```
-for order_id in ("ORD-101", "ORD-202", "ORD-303"):
-    if order_id in upper_prompt:
-        result = check_order_status(order_id)
-        if result:
-            return result
-
-lower_prompt = prompt.lower()
-
-service_words = [
-    "الخدمات", "خدماتكم", "شو بتقدم", "ماذا تقدم",
-    "services", "what can you do", "available services"
-]
-
-if any(word in lower_prompt for word in service_words):
-    return TEXT[language]["services_answer"]
-
-return None
-```
-
-# =====================================================
-
-# 7. تعليمات المساعد
-
-# =====================================================
 
 def get_system_instruction(language):
-if language == "العربية":
-return """
+    if language == "العربية":
+        return """
 أنت رداد RADDAD CYBER AI، مساعد ذكي احترافي.
 
-التعليمات:
+- أجب بالعربية ما لم يطلب المستخدم لغة أخرى.
+- كن دقيقًا ومباشرًا.
+- لا تخترع معلومات أو تدّعي تنفيذ عمليات لم تحدث.
+- حلل الصور والملفات المرفقة اعتمادًا على محتواها.
+- إذا لم تعرف الإجابة، وضّح ذلك.
+- بيانات الطلبات في التطبيق تجريبية.
+- اجعل الردود مختصرة افتراضيًا، وفصّل عند الطلب.
+"""
+    return """
+You are RADDAD CYBER AI, a professional intelligent assistant.
 
-* أجب باللغة العربية ما لم يطلب المستخدم لغة أخرى.
-* كن دقيقًا ومباشرًا ومفيدًا.
-* لا تخترع معلومات أو نتائج أو عمليات لم تنفذها.
-* عند تحليل صورة أو ملف، اعتمد على المحتوى الذي وصل إليك فقط.
-* إذا كانت المعلومات غير كافية، اسأل سؤالًا واضحًا.
-* لا تدّع أنك متصل بقاعدة بيانات أو موقع خارجي إذا لم تكن كذلك.
-* بيانات الطلبات وتذاكر الدعم في هذا التطبيق تجريبية.
-* اجعل الردود العادية مختصرة، واستخدم التفصيل عندما يطلب المستخدم ذلك.
-  """
-  return """
-  You are RADDAD CYBER AI, a professional intelligent assistant.
+- Respond in the user's language.
+- Be accurate, clear, and concise.
+- Never invent facts or claim actions you did not perform.
+- Analyze attached files using their actual content.
+- State clearly when you do not know something.
+- Order data in this application is demo data.
+"""
 
-Instructions:
 
-* Respond in English unless the user requests another language.
-* Be accurate, direct, and helpful.
-* Never invent facts or claim an action was completed when it was not.
-* Analyze uploaded media only using the content provided.
-* Ask a clear question when important information is missing.
-* Never claim to be connected to a database or external system when you are not.
-* Order data and support tickets in this app are demos.
-* Keep ordinary answers concise and expand when requested.
-  """
-
-# =====================================================
-
-# 8. الشريط الجانبي
-
-# =====================================================
+# ==========================================
+# 7. القائمة الجانبية
+# ==========================================
 
 with st.sidebar:
-st.markdown("## ⚡ RADDAD")
-st.caption("CYBER AI • SMART AGENT")
+    st.markdown("## ⚡ RADDAD CYBER AI")
+    st.caption("SMART MULTIMODAL AGENT")
+    st.divider()
 
-```
-st.divider()
+    t = TEXTS[st.session_state.language]
+    st.markdown(f"### ⚙️ {t['settings']}")
 
-st.markdown("### " + TEXT[st.session_state.language]["settings"])
+    language = st.selectbox(
+        t["language"],
+        ["العربية", "English"],
+        index=["العربية", "English"].index(
+            st.session_state.language
+        ),
+        key="language_select",
+    )
 
-language_options = ["العربية", "English"]
-selected_language = st.selectbox(
-    TEXT[st.session_state.language]["language"],
-    language_options,
-    index=language_options.index(st.session_state.language),
-    key="language_control"
+    if language != st.session_state.language:
+        st.session_state.language = language
+        st.rerun()
+
+    t = TEXTS[st.session_state.language]
+
+    theme = st.selectbox(
+        t["theme"],
+        ["Dark", "Light"],
+        index=["Dark", "Light"].index(
+            st.session_state.theme
+        ),
+        format_func=lambda x: (
+            t["dark"] if x == "Dark" else t["light"]
+        ),
+        key="theme_select",
+    )
+
+    if theme != st.session_state.theme:
+        st.session_state.theme = theme
+        st.rerun()
+
+    thinking_level = st.selectbox(
+        t["thinking"],
+        ["low", "medium", "high"],
+        index=0,
+    )
+
+    st.divider()
+    st.markdown(f"### 🤖 {t['status']}")
+
+    if API_KEY:
+        st.success("API key loaded")
+    else:
+        st.error(t["missing_key"])
+
+    st.code(MODEL_NAME)
+
+    if st.session_state.last_latency is not None:
+        st.metric(
+            t["latency"],
+            f"{st.session_state.last_latency:.2f} s",
+        )
+
+    if st.button(t["new"], use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.last_latency = None
+        st.session_state.pending_prompt = ""
+        st.session_state.upload_version += 1
+        st.rerun()
+
+    if st.button(t["clear"], use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.pending_prompt = ""
+        st.rerun()
+
+    if st.session_state.messages:
+        export_text = "\n\n".join(
+            f"{m['role'].upper()}:\n{m['content']}"
+            for m in st.session_state.messages
+        )
+
+        st.download_button(
+            t["export"],
+            data=export_text,
+            file_name="raddad_conversation.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+
+
+# ==========================================
+# 8. العنوان والإحصائيات
+# ==========================================
+
+t = TEXTS[st.session_state.language]
+
+st.markdown(
+    f"""
+    <div class="hero">
+        <h1>⚡ RADDAD CYBER AI</h1>
+        <p>{t['subtitle']}</p>
+        <span class="badge">● {MODEL_NAME}</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
-if selected_language != st.session_state.language:
-    st.session_state.language = selected_language
-    st.rerun()
+col1, col2, col3 = st.columns(3)
 
-language = st.session_state.language
-t = TEXT[language]
+with col1:
+    st.markdown(
+        """
+        <div class="metric">
+            <div class="metric-value">AI</div>
+            <div class="metric-label">SMART AGENT</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-theme_options = ["Dark", "Light"]
-theme_labels = {
-    "Dark": t["dark"],
-    "Light": t["light"],
-}
-
-selected_theme = st.selectbox(
-    t["theme"],
-    theme_options,
-    index=theme_options.index(st.session_state.theme),
-    format_func=lambda value: theme_labels[value],
-    key="theme_control"
-)
-
-if selected_theme != st.session_state.theme:
-    st.session_state.theme = selected_theme
-    st.rerun()
-
-creativity = st.slider(
-    t["creativity"],
-    min_value=0.0,
-    max_value=1.0,
-    value=0.3,
-    step=0.1
-)
-
-st.divider()
-
-st.markdown("### " + t["engine"])
-st.success("● Gemini API" if api_key else "● API key missing")
-st.info("Model: " + MODEL_NAME)
-
-if st.session_state.last_latency is not None:
-    st.metric(
-        t["latency"],
+with col2:
+    latency = (
         f"{st.session_state.last_latency:.2f} s"
+        if st.session_state.last_latency is not None
+        else "Ready"
     )
 
-st.divider()
-
-if st.button(t["new_chat"], use_container_width=True):
-    st.session_state.messages = []
-    st.session_state.last_answer = ""
-    st.session_state.last_latency = None
-    st.session_state.pending_prompt = ""
-    st.session_state.uploaded_version += 1
-    st.rerun()
-
-if st.button(t["reset"], use_container_width=True):
-    st.session_state.messages = []
-    st.session_state.last_answer = ""
-    st.session_state.pending_prompt = ""
-    st.rerun()
-
-if st.session_state.messages:
-    export_text = "\n\n".join(
-        f"{m['role'].upper()}:\n{m['content']}"
-        for m in st.session_state.messages
+    st.markdown(
+        f"""
+        <div class="metric">
+            <div class="metric-value">{latency}</div>
+            <div class="metric-label">{t['latency']}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    st.download_button(
-        t["export"],
-        data=export_text,
-        file_name="raddad_conversation.txt",
-        mime="text/plain",
-        use_container_width=True
+with col3:
+    status = "ONLINE" if API_KEY else "API KEY NEEDED"
+
+    st.markdown(
+        f"""
+        <div class="metric">
+            <div class="metric-value">{status}</div>
+            <div class="metric-label">SYSTEM STATUS</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-```
 
-# =====================================================
 
-# 9. العنوان والإحصائيات
+# ==========================================
+# 9. الاختصارات
+# ==========================================
 
-# =====================================================
+st.markdown(f"### {t['shortcuts']}")
 
-language = st.session_state.language
-t = TEXT[language]
+quick_cols = st.columns(4)
 
-subtitle = t["subtitle"]
-
-st.markdown(
-f""" <div class="hero"> <h1>⚡ RADDAD CYBER AI</h1> <p>{html.escape(subtitle)}</p> <span class="badge">● {MODEL_NAME}</span> </div>
-""",
-unsafe_allow_html=True
-)
-
-m1, m2, m3 = st.columns(3)
-
-with m1:
-st.markdown(
-f""" <div class="metric"> <div class="metric-value">AI</div> <div class="metric-label">SMART AGENT</div> </div>
-""",
-unsafe_allow_html=True
-)
-
-with m2:
-latency = (
-f"{st.session_state.last_latency:.2f} s"
-if st.session_state.last_latency is not None
-else t["status"]
-)
-
-```
-st.markdown(
-    f"""
-    <div class="metric">
-        <div class="metric-value">{html.escape(latency)}</div>
-        <div class="metric-label">{t["latency"]}</div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-```
-
-with m3:
-status_text = "READY" if api_key else "API KEY NEEDED"
-
-```
-st.markdown(
-    f"""
-    <div class="metric">
-        <div class="metric-value">{status_text}</div>
-        <div class="metric-label">SYSTEM STATUS</div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-```
-
-# =====================================================
-
-# 10. الأزرار السريعة
-
-# =====================================================
-
-st.markdown("### " + t["shortcuts"])
-
-col1, col2, col3, col4 = st.columns(4)
-
-if language == "العربية":
-shortcut_prompts = [
-"ما حالة الطلب ORD-101؟",
-"ما حالة الطلب ORD-202؟",
-"ما الخدمات التي تقدمها؟",
-"أحتاج إلى مساعدة في مشكلة تقنية.",
-]
+if st.session_state.language == "العربية":
+    quick_prompts = [
+        "ما حالة الطلب ORD-101؟",
+        "ما حالة الطلب ORD-202؟",
+        "ما الخدمات التي تقدمها؟",
+        t["support_prompt"],
+    ]
 else:
-shortcut_prompts = [
-"What is the status of order ORD-101?",
-"What is the status of order ORD-202?",
-"What services do you provide?",
-"I need help with a technical issue.",
+    quick_prompts = [
+        "What is the status of order ORD-101?",
+        "What is the status of order ORD-202?",
+        "What services do you provide?",
+        t["support_prompt"],
+    ]
+
+quick_labels = [
+    t["track1"],
+    t["track2"],
+    t["services"],
+    t["support"],
 ]
 
-shortcut_columns = [col1, col2, col3, col4]
-shortcut_labels = [
-t["track1"],
-t["track2"],
-t["services"],
-t["support"],
-]
+for i, col in enumerate(quick_cols):
+    with col:
+        if st.button(
+            quick_labels[i],
+            use_container_width=True,
+            key=f"quick_{i}",
+        ):
+            st.session_state.pending_prompt = quick_prompts[i]
+            st.rerun()
 
-for index, column in enumerate(shortcut_columns):
-with column:
-if st.button(
-shortcut_labels[index],
-use_container_width=True,
-key=f"shortcut_{index}"
-):
-st.session_state.pending_prompt = shortcut_prompts[index]
-st.rerun()
 
-# =====================================================
-
-# 11. عرض المحادثة
-
-# =====================================================
+# ==========================================
+# 10. سجل المحادثة
+# ==========================================
 
 if not st.session_state.messages:
-st.info(t["welcome"])
+    st.info(t["welcome"])
 
-for index, message in enumerate(st.session_state.messages):
-role = message["role"]
-avatar = "⚡" if role == "assistant" else "👤"
+for i, message in enumerate(st.session_state.messages):
+    role = message["role"]
 
-```
-with st.chat_message(role, avatar=avatar):
-    st.markdown(message["content"])
+    with st.chat_message(
+        role,
+        avatar="⚡" if role == "assistant" else "👤",
+    ):
+        st.markdown(message["content"])
 
-    if role == "assistant" and message["content"]:
-        if st.button(
-            "🔊 " + ("استمع للرد" if language == "العربية" else "Read aloud"),
-            key=f"speak_{index}"
-        ):
-            speech_text = json.dumps(
-                message["content"],
-                ensure_ascii=False
-            )
+        if role == "assistant" and message["content"]:
+            if st.button(t["read"], key=f"read_{i}"):
+                text_json = json.dumps(
+                    message["content"],
+                    ensure_ascii=False,
+                )
 
-            speech_lang = "ar" if language == "العربية" else "en"
+                lang_code = (
+                    "ar-SA"
+                    if st.session_state.language == "العربية"
+                    else "en-US"
+                )
 
-            components.html(
-                f"""
-                <script>
-                const text = {speech_text};
-                const language = "{speech_lang}";
-                if ("speechSynthesis" in window) {{
-                    window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.lang = language;
-                    utterance.rate = 1.0;
-                    window.speechSynthesis.speak(utterance);
-                }}
-                </script>
-                """,
-                height=0
-            )
-```
+                components.html(
+                    f"""
+                    <script>
+                    if ("speechSynthesis" in window) {{
+                        window.speechSynthesis.cancel();
+                        const speech = new SpeechSynthesisUtterance(
+                            {text_json}
+                        );
+                        speech.lang = "{lang_code}";
+                        speech.rate = 1;
+                        window.speechSynthesis.speak(speech);
+                    }}
+                    </script>
+                    """,
+                    height=0,
+                )
 
-# =====================================================
 
-# 12. الوسائط المتعددة
-
-# =====================================================
+# ==========================================
+# 11. الملفات والكاميرا والصوت
+# ==========================================
 
 st.divider()
 
-tab_file, tab_camera, tab_voice = st.tabs([
-t["upload"],
-t["camera"],
-t["voice"]
-])
-
-uploaded_files = []
-camera_photo = None
-audio_data = None
-
-with tab_file:
-uploaded_files = st.file_uploader(
-t["choose_file"],
-type=[
-"png", "jpg", "jpeg", "webp",
-"pdf",
-"mp3", "wav", "m4a", "ogg", "aac", "flac"
-],
-accept_multiple_files=True,
-key=f"upload_{st.session_state.uploaded_version}"
+tab_files, tab_camera, tab_voice = st.tabs(
+    [t["files"], t["camera"], t["voice"]]
 )
 
-```
-if uploaded_files:
-    for uploaded in uploaded_files:
-        st.caption(f"📎 {uploaded.name}")
-
-        if uploaded.type.startswith("image/"):
-            st.image(
-                uploaded,
-                caption=uploaded.name,
-                use_container_width=True
-            )
-```
-
-with tab_camera:
-camera_photo = st.camera_input(
-t["camera_text"],
-key=f"camera_{st.session_state.uploaded_version}"
-)
-
-with tab_voice:
-audio_data = st.audio_input(
-t["record"],
-key=f"audio_{st.session_state.uploaded_version}"
-)
-
-```
-if audio_data:
-    st.audio(audio_data)
-```
-
-# =====================================================
-
-# 13. استقبال الرسائل
-
-# =====================================================
-
-chat_placeholder = t["chat_placeholder"]
-
-typed_prompt = st.chat_input(chat_placeholder)
-
-if typed_prompt:
-st.session_state.pending_prompt = typed_prompt
-
-prompt = st.session_state.pending_prompt
-
-if prompt or uploaded_files or camera_photo or audio_data:
-
-```
-if not prompt:
-    prompt = (
-        "حلل الملفات المرفقة وأخبرني بمحتواها."
-        if language == "العربية"
-        else "Analyze the attached files and describe their content."
+with tab_files:
+    uploaded_files = st.file_uploader(
+        t["file_hint"],
+        type=[
+            "png", "jpg", "jpeg", "webp",
+            "pdf",
+            "mp3", "wav", "m4a", "ogg", "aac", "flac",
+        ],
+        accept_multiple_files=True,
+        key=f"files_{st.session_state.upload_version}",
     )
-
-st.session_state.pending_prompt = ""
-
-user_message = prompt
-
-if audio_data:
-    user_message += (
-        "\n[تم إرفاق تسجيل صوتي]"
-        if language == "العربية"
-        else "\n[Audio recording attached]"
-    )
-
-st.session_state.messages.append({
-    "role": "user",
-    "content": user_message
-})
-
-with st.chat_message("user", avatar="👤"):
-    st.markdown(prompt)
 
     if uploaded_files:
         for file in uploaded_files:
-            st.caption("📎 " + file.name)
+            st.caption(f"📎 {file.name}")
 
-    if camera_photo:
-        st.image(camera_photo, width=250)
+            if file.type and file.type.startswith("image/"):
+                st.image(
+                    file,
+                    caption=file.name,
+                    use_container_width=True,
+                )
+
+with tab_camera:
+    camera_photo = st.camera_input(
+        t["camera_hint"],
+        key=f"camera_{st.session_state.upload_version}",
+    )
+
+with tab_voice:
+    audio_data = st.audio_input(
+        t["voice_hint"],
+        key=f"audio_{st.session_state.upload_version}",
+    )
 
     if audio_data:
         st.audio(audio_data)
 
-# -------------------------------------------------
-# معالجة الأدوات المحلية دون استدعاء النموذج
-# -------------------------------------------------
 
-quick_result = detect_quick_action(prompt, language)
+# ==========================================
+# 12. إرسال الرسالة
+# ==========================================
 
-if quick_result:
-    answer = quick_result
+chat_text = st.chat_input(t["placeholder"])
 
-    with st.chat_message("assistant", avatar="⚡"):
-        st.markdown(answer)
+if chat_text:
+    st.session_state.pending_prompt = chat_text
+
+prompt = st.session_state.pending_prompt
+
+has_files = (
+    bool(uploaded_files)
+    or camera_photo is not None
+    or audio_data is not None
+)
+
+if prompt or has_files:
+
+    if not prompt:
+        if st.session_state.language == "العربية":
+            prompt = (
+                "حلل الملفات المرفقة وأخبرني بمحتواها. "
+                "استمع للتسجيل الصوتي وأجب عنه إذا وُجد."
+            )
+        else:
+            prompt = (
+                "Analyze the attached files and describe their content. "
+                "Listen to and respond to the audio if present."
+            )
+
+    st.session_state.pending_prompt = ""
+
+    language = st.session_state.language
+    t = TEXTS[language]
+
+    user_display = prompt
+
+    if audio_data:
+        user_display += (
+            "\n🎙️ [تسجيل صوتي مرفق]"
+            if language == "العربية"
+            else "\n🎙️ [Audio attached]"
+        )
 
     st.session_state.messages.append({
-        "role": "assistant",
-        "content": answer
+        "role": "user",
+        "content": user_display,
     })
 
-    st.session_state.last_answer = answer
+    with st.chat_message("user", avatar="👤"):
+        st.markdown(prompt)
 
-    st.session_state.uploaded_version += 1
-    st.rerun()
+        if uploaded_files:
+            for file in uploaded_files:
+                st.caption("📎 " + file.name)
 
-# -------------------------------------------------
-# الاتصال بالنموذج
-# -------------------------------------------------
+        if camera_photo is not None:
+            st.image(camera_photo, width=250)
 
-if not api_key:
-    st.error(t["error_key"])
-    st.stop()
+        if audio_data is not None:
+            st.audio(audio_data)
 
-start_time = time.perf_counter()
+    # --------------------------------------
+    # معالجة الطلبات السريعة محليًا
+    # --------------------------------------
 
-try:
-    client = get_client(api_key)
+    quick_result = local_action(prompt, language)
 
-    # تجهيز تاريخ مختصر لتقليل حجم الطلب
-    history = st.session_state.messages[:-1][-MAX_HISTORY:]
+    if quick_result:
+        with st.chat_message("assistant", avatar="⚡"):
+            st.markdown(quick_result)
 
-    contents = []
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": quick_result,
+        })
 
-    for item in history:
-        role = "model" if item["role"] == "assistant" else "user"
+        st.session_state.upload_version += 1
+        st.rerun()
+
+    # --------------------------------------
+    # التحقق من المفتاح
+    # --------------------------------------
+
+    if not API_KEY:
+        st.error(t["missing_key"])
+        st.stop()
+
+    started = time.perf_counter()
+
+    try:
+        client = get_client(API_KEY)
+
+        # سجل مختصر للمحادثة لتقليل حجم الطلب
+        previous_messages = (
+            st.session_state.messages[:-1][-MAX_HISTORY:]
+        )
+
+        contents = []
+
+        for old in previous_messages:
+            contents.append(
+                types.Content(
+                    role=(
+                        "model"
+                        if old["role"] == "assistant"
+                        else "user"
+                    ),
+                    parts=[
+                        types.Part.from_text(
+                            text=old["content"]
+                        )
+                    ],
+                )
+            )
+
+        current_parts = [
+            types.Part.from_text(text=prompt)
+        ]
+
+        # الملفات المرفقة
+        if uploaded_files:
+            for file in uploaded_files:
+                mime_type = (
+                    file.type or "application/octet-stream"
+                )
+
+                supported = (
+                    mime_type.startswith("image/")
+                    or mime_type.startswith("audio/")
+                    or mime_type == "application/pdf"
+                )
+
+                if not supported:
+                    st.warning(
+                        f"{t['file_error']}: {file.name}"
+                    )
+                    continue
+
+                current_parts.append(
+                    types.Part.from_bytes(
+                        data=file.getvalue(),
+                        mime_type=mime_type,
+                    )
+                )
+
+        # صورة الكاميرا
+        if camera_photo is not None:
+            current_parts.append(
+                types.Part.from_bytes(
+                    data=camera_photo.getvalue(),
+                    mime_type="image/jpeg",
+                )
+            )
+
+        # التسجيل الصوتي
+        if audio_data is not None:
+            current_parts.append(
+                types.Part.from_bytes(
+                    data=audio_data.getvalue(),
+                    mime_type=audio_data.type or "audio/wav",
+                )
+            )
 
         contents.append(
             types.Content(
-                role=role,
-                parts=[
-                    types.Part.from_text(text=item["content"])
-                ]
+                role="user",
+                parts=current_parts,
             )
         )
 
-    current_parts = [
-        types.Part.from_text(text=prompt)
-    ]
+        # لا نستخدم temperature مع Gemini 3.8 Flash
+        config = types.GenerateContentConfig(
+            system_instruction=get_system_instruction(language),
+            max_output_tokens=2048,
+            thinking_config=types.ThinkingConfig(
+                thinking_level=thinking_level
+            ),
+        )
 
-    # ملفات الصور وPDF والصوت
-    if uploaded_files:
-        for uploaded in uploaded_files:
-            mime_type = uploaded.type
+        # عرض الرد تدريجيًا
+        with st.chat_message("assistant", avatar="⚡"):
+            answer_box = st.empty()
+            answer_parts = []
 
-            supported = (
-                mime_type.startswith("image/")
-                or mime_type.startswith("audio/")
-                or mime_type == "application/pdf"
-            )
-
-            if not supported:
-                st.warning(
-                    t["invalid_file"] + " " + uploaded.name
+            with st.spinner(t["waiting"]):
+                stream = client.models.generate_content_stream(
+                    model=MODEL_NAME,
+                    contents=contents,
+                    config=config,
                 )
-                continue
 
-            current_parts.append(
-                types.Part.from_bytes(
-                    data=uploaded.getvalue(),
-                    mime_type=mime_type
+                for chunk in stream:
+                    if chunk.text:
+                        answer_parts.append(chunk.text)
+
+                        answer_box.markdown(
+                            "".join(answer_parts) + " ▌"
+                        )
+
+            answer = "".join(answer_parts).strip()
+
+            if not answer:
+                answer = (
+                    "لم يصل رد نصي من النموذج. جرّب مرة ثانية."
+                    if language == "العربية"
+                    else "The model returned no text. Please try again."
                 )
-            )
 
-    # صورة الكاميرا
-    if camera_photo:
-        current_parts.append(
-            types.Part.from_bytes(
-                data=camera_photo.getvalue(),
-                mime_type="image/jpeg"
-            )
+            answer_box.markdown(answer)
+
+        st.session_state.last_latency = (
+            time.perf_counter() - started
         )
 
-    # التسجيل الصوتي
-    if audio_data:
-        audio_mime = audio_data.type or "audio/wav"
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": answer,
+        })
 
-        current_parts.append(
-            types.Part.from_bytes(
-                data=audio_data.getvalue(),
-                mime_type=audio_mime
-            )
-        )
+    except Exception as error:
+        st.error(t["api_error"])
 
-    contents.append(
-        types.Content(
-            role="user",
-            parts=current_parts
-        )
-    )
+        with st.expander("Technical details"):
+            st.code(str(error))
 
-    config = types.GenerateContentConfig(
-        system_instruction=get_system_instruction(language),
-        temperature=creativity,
-        max_output_tokens=2048,
-        thinking_config=types.ThinkingConfig(
-            thinking_level="low"
-        )
-    )
+    st.session_state.upload_version += 1
+    st.rerun()
 
-    with st.chat_message("assistant", avatar="⚡"):
-        response_placeholder = st.empty()
-        streamed_text = ""
 
-        with st.spinner(t["thinking"]):
-            for chunk in client.models.generate_content_stream(
-                model=MODEL_NAME,
-                contents=contents,
-                config=config
-            ):
-                chunk_text = chunk.text
-
-                if chunk_text:
-                    streamed_text += chunk_text
-                    response_placeholder.markdown(
-                        streamed_text + " ▌"
-                    )
-
-        answer = streamed_text.strip()
-
-        if not answer:
-            answer = (
-                "لم يصل رد نصي من النموذج. جرّب مرة ثانية."
-                if language == "العربية"
-                else "The model returned no text. Please try again."
-            )
-
-        response_placeholder.markdown(answer)
-
-    elapsed = time.perf_counter() - start_time
-
-    st.session_state.last_latency = elapsed
-    st.session_state.last_answer = answer
-
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": answer
-    })
-
-except Exception as error:
-    st.error(t["error_model"])
-
-    # التفاصيل للمطور فقط حتى يسهل تشخيص المشكلة
-    with st.expander("Technical details"):
-        st.code(str(error))
-
-st.session_state.uploaded_version += 1
-st.rerun()
-```
-
-# =====================================================
-
-# 14. تذييل الصفحة
-
-# =====================================================
+# ==========================================
+# 13. تذييل
+# ==========================================
 
 st.markdown(
-f'<div class="note">{html.escape(t["privacy"])}</div>',
-unsafe_allow_html=True
+    f'<div class="small-note">🔒 {TEXTS[st.session_state.language]["privacy"]}</div>',
+    unsafe_allow_html=True,
 )
