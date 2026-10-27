@@ -68,7 +68,7 @@ if user_input:
         try:
             # بث تدفقي سريع باستخدام المكتبة الجديدة والموديل المطلوب
             res_stream = client.models.generate_content_stream(
-                model="gemini-3.8-flash",
+                model="gemini-2.5-flash",
                 contents=prompt_final,
                 config={"system_instruction": SYSTEM_INSTRUCTION}
             )
