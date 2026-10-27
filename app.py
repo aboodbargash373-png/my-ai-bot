@@ -26,7 +26,7 @@ client = get_gemini_client()
 
 SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِي لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية.,جاوب بلغت المستخدم الي سالك فيها"
 
-# 4. الأدوات والـ RAG 
+# 4. الأدوات والـ RAG والدوال الخاصة
 def check_order_status(order_id: str) -> str:
     db = {
         "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
@@ -36,6 +36,13 @@ def check_order_status(order_id: str) -> str:
     clean_id = order_id.strip().upper()
     return db.get(clean_id, f"رقم الطلب {clean_id} غير موجود في النظام.")
 
+def check_developer_info(query: str) -> str:
+    """دالة مستقلة للتحقق من أسئلة المطور وفكرة المشروع"""
+    keywords = ["مين طورك", "فكرة مين", "صممك", "مطور", "من صنعك", "who made you", "طـورك"]
+    if any(k in query.lower() for k in keywords):
+        return "المطور الذي قام بتطوير رداد وصمم فكرته هو عبد الكريم (Abdulkareem)."
+    return ""
+
 def search_company_rag(query: str) -> str:
     knowledge_base = [
         "سياسة الإرجاع: يمكن إرجاع أي منتج خلال 14 يوم من تاريخ الشراء بشرط أن يكون بحالته الأصلية.",
@@ -43,11 +50,6 @@ def search_company_rag(query: str) -> str:
         "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلام."
     ]
 
-    def ceo_raddad(ceo :str) -> str:
-        qp=[
-            "المطور ل رداد هوه : Abdulkareem ",
-            "رداد هوه فكرة  : Abdulkareem ",
-        ]
     for doc in knowledge_base:
         if any(w in query.lower() for w in doc.lower().split() if len(w) > 3):
             return doc
@@ -71,16 +73,21 @@ if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
 
     with st.chat_message("assistant", avatar="⚡"):
-        # فحص محلي ذكي وسريع للأدوات أو الـ RAG
         extra_context = ""
         
-        # فحص الطلبات
+        # 1. فحص الطلبات
         for code in ["ORD-101", "ORD-202", "ORD-303"]:
             if code in user_input.upper():
                 extra_context = f"\n[نتيجة نظام الطلبات: {check_order_status(code)}]"
                 break
         
-        # فحص الـ RAG لو ما كان طلب شحنة
+        # 2. فحص دالة المطور إذا لم يكن سؤالاً عن طلب
+        if not extra_context:
+            dev_res = check_developer_info(user_input)
+            if dev_res:
+                extra_context = f"\n[معلومات المطور: {dev_res}]"
+
+        # 3. فحص الـ RAG العادي للشركة إذا لم يوجد سياق سابق
         if not extra_context:
             rag_res = search_company_rag(user_input)
             if rag_res:
@@ -90,7 +97,7 @@ if user_input:
 
         try:
             res_stream = client.models.generate_content_stream(
-                model="gemini-3.6-flash",
+                model="gemini-2.5-flash",  # تم تعديل اسم النموذج ليتوافق مع المعرفات المستقرة
                 contents=prompt_final,
                 config={"system_instruction": SYSTEM_INSTRUCTION}
             )
