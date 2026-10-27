@@ -43,8 +43,8 @@ def search_company_rag(query: str) -> str:
         "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلام."
     ]
 
-    def ceo_raddad(query:str) -> str:
-        Q=[
+    def ceo_raddad(ceo :str) -> str:
+        qp=[
             "المطور ل رداد هوه : Abdulkareem ",
             "رداد هوه فكرة  : Abdulkareem ",
         ]
