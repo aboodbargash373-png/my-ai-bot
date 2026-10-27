@@ -25,7 +25,7 @@ def get_gemini_client():
     return genai.Client(api_key=API_KEY)
 
 client = get_gemini_client()
-SYSTEM_INSTRUCTION = "أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية."
+SYSTEM_INSTRUCTION = "ادا لم تجد الجواب المناسب احكي لا اعلم  ب اسلوب راقي ولا تؤلمف نتائج من عندك, أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربي."
 
 # 5. أداة تتبع الطلبات المباشرة
 def check_order_status(order_id: str) -> str:
