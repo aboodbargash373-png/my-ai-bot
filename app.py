@@ -1,5 +1,5 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
 import time
 
 # 1. إعدادات الصفحة
@@ -19,16 +19,13 @@ if not API_KEY:
     st.error("⚠️ يرجى إضافة GEMINI_API_KEY في Streamlit Secrets.")
     st.stop()
 
-# 4. تخزين اتصال النموذج في الذاكرة لمنع إعادة الاتصال الثقيل مع كل رسالة (السرعة)
+# 4. تخزين اتصال الـ client في الذاكرة لمنع إعادة الاتصال الثقيل (السرعة)
 @st.cache_resource
-def get_model():
-    genai.configure(api_key=API_KEY)
-    return genai.GenerativeModel(
-        model_name="gemini-3.8-flash",
-        system_instruction="أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية."
-    )
+def get_gemini_client():
+    return genai.Client(api_key=API_KEY)
 
-model = get_model()
+client = get_gemini_client()
+SYSTEM_INSTRUCTION = "أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية."
 
 # 5. أداة تتبع الطلبات المباشرة
 def check_order_status(order_id: str) -> str:
@@ -69,8 +66,12 @@ if user_input:
         prompt_final = f"نتيجة فحص النظام لطلب العميل: {tool_res}" if tool_res else user_input
 
         try:
-            # بث تدفقي سريع
-            res_stream = model.generate_content(prompt_final, stream=True)
+            # بث تدفقي سريع باستخدام المكتبة الجديدة والموديل المطلوب
+            res_stream = client.models.generate_content_stream(
+                model="gemini-3.8-flash",
+                contents=prompt_final,
+                config={"system_instruction": SYSTEM_INSTRUCTION}
+            )
             
             def stream_gen():
                 for chunk in res_stream:
@@ -81,4 +82,3 @@ if user_input:
             st.session_state.messages.append({"role": "assistant", "content": full_res})
         except Exception as e:
             st.error(f"حدث خطأ: {e}")
-            
