@@ -2,7 +2,7 @@ import streamlit as st
 from google import genai
 
 # 1. إعدادات الصفحة
-st.set_page_config(page_title="رداد - Raddad Cyber AI", page_icon="⚡", layout="centered")
+st.set_page_config(page_title=" - Raddad  AI - ", page_icon="⚡", layout="centered")
 
 # 2. تصميم CSS
 st.markdown("""
@@ -24,9 +24,9 @@ def get_gemini_client():
 
 client = get_gemini_client()
 
-SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِ لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية."
+SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِي لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية.,جاوب بلغت المستخدم الي سالك فيها"
 
-# 4. الأدوات والـ RAG (طريقة مباشرة وسريعة بدون تعقيد)
+# 4. الأدوات والـ RAG 
 def check_order_status(order_id: str) -> str:
     db = {
         "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
@@ -48,7 +48,7 @@ def search_company_rag(query: str) -> str:
     return ""
 
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "مرحباً بك! ⚡ أنا **رداد**. كيف أستطيع مساعدتك اليوم؟"}]
+    st.session_state.messages = [{"role": "assistant", "content": "مرحباً بك! ⚡ أنا **RADDAD**. كيف أستطيع مساعدتك اليوم؟"}]
 
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
 
