@@ -97,7 +97,7 @@ if user_input:
 
         try:
             res_stream = client.models.generate_content_stream(
-                model="gemini-2.5-flash",  # تم تعديل اسم النموذج ليتوافق مع المعرفات المستقرة
+                model="gemini-3.6-flash",  # تم تعديل اسم النموذج ليتوافق مع المعرفات المستقرة
                 contents=prompt_final,
                 config={"system_instruction": SYSTEM_INSTRUCTION}
             )
