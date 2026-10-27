@@ -42,6 +42,12 @@ def search_company_rag(query: str) -> str:
         "أوقات العمل: دعم عملاء رداد يعمل على مدار الساعة 24/7 طوال أيام الأسبوع.",
         "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلام."
     ]
+
+    def ceo_raddad(query:str) -> str:
+        Q=[
+            "المطور ل رداد هوه : Abdulkareem ",
+            "رداد هوه فكرة  : Abdulkareem ",
+        ]
     for doc in knowledge_base:
         if any(w in query.lower() for w in doc.lower().split() if len(w) > 3):
             return doc
