@@ -4,51 +4,94 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات
+# 2. تعريف درجات الألوان وتدرجات بطاقات الثيمات الثلاثة
 THEMES = {
     "pistachio": {
+        "name": "فستقي",
         "accent": "#558b2f",
         "user_bg": "#558b2f",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #162214 100%)",
         "sidebar_bg": "#121a11",
-        "color": "#558b2f"
+        "card_gradient": "linear-gradient(180deg, #558b2f 0%, #111827 100%)"
     },
     "burgundy": {
+        "name": "برغندي",
         "accent": "#a91d3a",
         "user_bg": "#800020",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #251015 100%)",
         "sidebar_bg": "#1a1012",
-        "color": "#800020"
+        "card_gradient": "linear-gradient(180deg, #a91d3a 0%, #111827 100%)"
     },
     "sky_white": {
-        "accent": "#00b4d8",
-        "user_bg": "#0096c7",
+        "name": "سماوي وأبيض",
+        "accent": "#38bdf8",
+        "user_bg": "#0284c7",
         "bg_gradient": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
         "sidebar_bg": "#0b1329",
-        "color": "#00b4d8"
+        "card_gradient": "linear-gradient(180deg, #38bdf8 0%, #ffffff 100%)"
     }
 }
 
-# 3. استخدام Radio button مخصص مخفي تماماً لتصير الدوائر نفسها هي الكبسات بدون مربعات رمادية
-st.sidebar.title("Themes 🎨")
-
-# تعيين الخيار الافتراضي
+# تهيئة الثيم الافتراضي (فستقي)
 if "selected_theme_key" not in st.session_state:
     st.session_state.selected_theme_key = "pistachio"
 
-selected_theme_key = st.sidebar.radio(
-    "Themes",
-    options=list(THEMES.keys()),
-    index=list(THEMES.keys()).index(st.session_state.selected_theme_key),
-    label_visibility="collapsed"
-)
-st.session_state.selected_theme_key = selected_theme_key
-active_theme = THEMES[selected_theme_key]
+active_theme = THEMES[st.session_state.selected_theme_key]
 
-# 4. حقن الـ CSS لتطبيق الثيم بالكامل + تحويل خيارات الراديو إلى دوائر ملونة صافية 100%
+# 3. تصميم الـ Sidebar باسم Themes وبطاقات ألوان أنيقة وعصرية (مثل الصورة الثانية تماماً)
+st.sidebar.title("Themes 🎨")
+
+# عرض بطاقات الثيمات جنب بعض بـ 3 أعمدة
+cols = st.sidebar.columns(3)
+theme_keys = list(THEMES.keys())
+
+for idx, t_key in enumerate(theme_keys):
+    with cols[idx]:
+        is_selected = st.session_state.selected_theme_key == t_key
+        border_style = "2px solid #ffffff" if is_selected else "1px solid rgba(255,255,255,0.15)"
+        
+        # إنشاء بطاقة ملونة ككبسة تفاعلية
+        card_html = f"""
+            <div style="
+                background: {THEMES[t_key]['card_gradient']};
+                height: 100px;
+                border-radius: 14px;
+                border: {border_style};
+                box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+                cursor: pointer;
+                transition: transform 0.2s;
+            "></div>
+        """
+        st.markdown(card_html, unsafe_allow_html=True)
+        # زر شفاف يغطي البطاقة بالكامل لضمان التفاعل عند الكبس على الصورة مباشرة
+        if st.button(THEMES[t_key]["name"], key=f"theme_card_{t_key}", use_container_width=True):
+            st.session_state.selected_theme_key = t_key
+            st.rerun()
+
+# 4. حقن الـ CSS الشامل لتطبيق الألوان وتصفية الواجهة وإلغاء أي زوائد
 st.markdown(f"""
 <style>
-    /* خلفية التطبيق الشاملة */
+    /* جعل أزرار الثيمات شفافة وتغطي البطاقات تماماً */
+    div[data-testid="stSidebar"] div[data-testid="stButton"] button {{
+        background-color: transparent !important;
+        border: none !important;
+        color: #e5e7eb !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        margin-top: -100px !important;
+        height: 100px !important;
+        width: 100% !important;
+        display: flex !important;
+        align-items: flex-end !important;
+        justify-content: center !important;
+        padding-bottom: 6px !important;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }}
+    div[data-testid="stSidebar"] div[data-testid="stButton"] button:hover {{
+        background-color: rgba(255, 255, 255, 0.05) !important;
+    }}
+
+    /* خلفية التطبيق الشاملة بتدرج فخم */
     .stApp {{
         background: {active_theme['bg_gradient']};
         color: #c9d1d9;
@@ -57,60 +100,6 @@ st.markdown(f"""
     /* الشريط الجانبي */
     [data-testid="stSidebar"] {{
         background-color: {active_theme['sidebar_bg']};
-    }}
-
-    /* تحويل خيارات الراديو في السايدبار إلى دوائر ملونة فقط وإلغاء أي مربعات رمادية */
-    div[data-testid="stRadio"] > div {{
-        display: flex !important;
-        flex-direction: row !important;
-        justify-content: space-around !important;
-        gap: 10px !important;
-    }}
-
-    div[data-testid="stRadio"] label {{
-        padding: 0 !important;
-        margin: 0 !important;
-        cursor: pointer !important;
-    }}
-
-    div[data-testid="stRadio"] label > div:first-child {{
-        display: none !important; /* إخفاء نقطة اختيار الراديو العادية */
-    }}
-
-    /* الدائرة الأولى (فستقي) */
-    div[data-testid="stRadio"] label:nth-child(1) div[data-testid="stMarkdownContainer"] p {{
-        width: 45px !important;
-        height: 45px !important;
-        background-color: #558b2f !important;
-        border-radius: 50% !important;
-        font-size: 0px !important;
-        border: {"3px solid #ffffff" if selected_theme_key == "pistachio" else "2px solid transparent"} !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        transition: all 0.2s ease;
-    }}
-
-    /* الدائرة الثانية (برغندي) */
-    div[data-testid="stRadio"] label:nth-child(2) div[data-testid="stMarkdownContainer"] p {{
-        width: 45px !important;
-        height: 45px !important;
-        background-color: #800020 !important;
-        border-radius: 50% !important;
-        font-size: 0px !important;
-        border: {"3px solid #ffffff" if selected_theme_key == "burgundy" else "2px solid transparent"} !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        transition: all 0.2s ease;
-    }}
-
-    /* الدائرة الثالثة (سماوي) */
-    div[data-testid="stRadio"] label:nth-child(3) div[data-testid="stMarkdownContainer"] p {{
-        width: 45px !important;
-        height: 45px !important;
-        background-color: #00b4d8 !important;
-        border-radius: 50% !important;
-        font-size: 0px !important;
-        border: {"3px solid #ffffff" if selected_theme_key == "sky_white" else "2px solid transparent"} !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        transition: all 0.2s ease;
     }}
 
     /* العنوان الرئيسي */
@@ -166,7 +155,7 @@ st.markdown(f"""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }}
 
-    /* تثبيت صندوق الكتابة في أسفل الشاشة تماماً */
+    /* تثبيت صندوق الكتابة بالأسفل بشكل احترافي */
     div[data-testid="stChatInput"] {{
         position: fixed !important;
         bottom: 15px !important;
@@ -177,7 +166,7 @@ st.markdown(f"""
         z-index: 999;
     }}
 
-    /* زر رفع الملفات (+): يوضع بجانب صندوق الكتابة بالأسفل مباشرة في المنتصف */
+    /* وضع زر رفع الملفات (+) بجانب صندوق الكتابة بالأسفل مباشرة بمنتصف الدائرة */
     div[data-testid="stFileUploader"] {{
         position: fixed !important;
         bottom: 20px !important;
@@ -211,7 +200,7 @@ st.markdown(f"""
         display: none !important;
     }}
     
-    /* علامة الزائد (+) متمركزة في منتصف الدائرة تماماً */
+    /* علامة الزائد (+) متمركزة تماماً في منتصف الدائرة */
     div[data-testid="stFileUploader"] section::after {{
         content: "+";
         font-size: 24px;
@@ -294,7 +283,7 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 8. واجهة الإدخال ورفع الملفات بعلامة (+) متمركزة ومجاورة لـ chat_input
+# 8. واجهة الإدخال ورفع الملفات (+) المجاورة لصندوق الكتابة بالأسفل
 uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
 user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
