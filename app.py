@@ -4,25 +4,54 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. إعداد الثيمات (الفستقي هو الافتراضي)
-themes = {
-    "فستقي وأسود (الافتراضي)": {"user_bg": "#558b2f", "title_color": "#558b2f"},
-    "برغندي وأسود": {"user_bg": "#800020", "title_color": "#800020"},
-    "خمري وأسود": {"user_bg": "#7a1c2e", "title_color": "#7a1c2e"}
+# 2. تعريف درجات الألوان للثيمات
+THEMES = {
+    "فستقي وأسود (الافتراضي)": {
+        "bg": "#0d1117",
+        "user_bubble": "#558b2f",
+        "accent": "#558b2f"
+    },
+    "برغندي وأسود": {
+        "bg": "#0d1117",
+        "user_bubble": "#800020",
+        "accent": "#800020"
+    },
+    "خمري وأسود": {
+        "bg": "#0d1117",
+        "user_bubble": "#7a1c2e",
+        "accent": "#7a1c2e"
+    }
 }
 
-# شريط جانبي لاختيار الثيم
-st.sidebar.title("إعدادات التطبيق 🎨")
-selected_theme_name = st.sidebar.selectbox("اختر الثيم:", list(themes.keys()), index=0)
-current_theme = themes[selected_theme_name]
+# 3. اختيار الثيم من الشريط الجانبي
+st.sidebar.title("إعدادات الثيم 🎨")
+selected_theme = st.sidebar.selectbox(
+    "اختر الثيم المفضّل:",
+    list(THEMES.keys()),
+    index=0
+)
 
-# 3. تصميم CSS مرتب لفقاعات الشات واتجاهاتها وتثبيت الألوان
+active_theme = THEMES[selected_theme]
+
+# 4. تطبيق الـ CSS المخصص ديناميكياً لتحديث الألوان وتنسيق زر (+)
 st.markdown(f"""
 <style>
-    .stApp {{ background-color: #0d1117; color: #c9d1d9; }}
-    .cyber-title {{ font-size: 2.2rem; font-weight: bold; text-align: center; color: {current_theme['title_color']}; margin-bottom: 20px; }}
+    /* خلفية التطبيق */
+    .stApp {{
+        background-color: {active_theme['bg']};
+        color: #c9d1d9;
+    }}
+    
+    /* العنوان الرئيسي */
+    .cyber-title {{
+        font-size: 2.2rem;
+        font-weight: bold;
+        text-align: center;
+        color: {active_theme['accent']};
+        margin-bottom: 25px;
+    }}
 
-    /* حاوية رسالة المستخدم - يمين */
+    /* حاويات المحادثة */
     .chat-row-user {{
         display: flex;
         justify-content: flex-end;
@@ -31,7 +60,6 @@ st.markdown(f"""
         direction: rtl;
     }}
 
-    /* حاوية رد البوت - يسار */
     .chat-row-assistant {{
         display: flex;
         justify-content: flex-start;
@@ -40,39 +68,49 @@ st.markdown(f"""
         direction: rtl;
     }}
 
-    /* فقاعة النص */
+    /* فقاعات الشات */
     .chat-bubble {{
         max-width: 75%;
         padding: 12px 16px;
-        border-radius: 15px;
+        border-radius: 16px;
         font-size: 16px;
         line-height: 1.5;
         word-wrap: break-word;
     }}
 
-    /* فقاعة المستخدم (تتغير حسب الثيم المختار) */
     .user-bubble {{
-        background-color: {current_theme['user_bg']};
-        color: white;
+        background-color: {active_theme['user_bubble']} !important;
+        color: #ffffff;
         border-bottom-right-radius: 2px;
     }}
 
-    /* فقاعة البوت */
     .assistant-bubble {{
         background-color: #202c33;
-        color: white;
+        color: #ffffff;
         border-bottom-left-radius: 2px;
     }}
+
+    /* جعل زر رفع الملفات يبدو ككبسة (+) بجانب خانة الإدخال */
+    div[data-testid="stFileUploader"] {{
+        padding: 0px !important;
+        margin: 0px !important;
+    }}
     
-    /* تنسيق زر رفع الملفات ليصبح متناسقاً */
-    [data-testid="stFileUploader"] {{
-        width: 100%;
-        margin-top: 5px;
+    div[data-testid="stFileUploader"] section {{
+        padding: 6px 12px !important;
+        border-radius: 10px !important;
+        background-color: #1f2937 !important;
+        border: 1px solid #374151 !important;
+        min-height: unset !important;
+    }}
+
+    div[data-testid="stFileUploader"] section span {{
+        display: none !important;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# 4. إعداد مفتاح API
+# 5. إعداد مفتاح API و Client
 API_KEY = st.secrets.get("GEMINI_API_KEY")
 if not API_KEY:
     st.error("⚠️ يرجى إضافة GEMINI_API_KEY في Streamlit Secrets.")
@@ -86,7 +124,7 @@ client = get_gemini_client()
 
 SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِي لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية.,جاوب بلغت المستخدم الي سالك فيها"
 
-# 5. الدوال الخاصة (RAG والطلبات والمطور)
+# 6. الدوال الخاصة والـ RAG
 def check_order_status(order_id: str) -> str:
     db = {
         "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
@@ -113,13 +151,14 @@ def search_company_rag(query: str) -> str:
             return doc
     return ""
 
-# تهيئة الذاكرة
+# تهيئة سياق الرسائل
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "مرحباً بك! ⚡ أنا **RADDAD**. كيف أستطيع مساعدتك اليوم؟"}]
 
+# عرض العنوان الرئيسي
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
 
-# عرض المحادثة السابقة
+# عرض سجل الرسائل
 for msg in st.session_state.messages:
     if msg["role"] == "user":
         st.markdown(f"""
@@ -138,25 +177,19 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 6. قسم الإدخال وزر رفع الملفات (تصميم مرتب ومضبوط بجانب بعضه)
-with st.container():
-    col_input, col_btn = st.columns([0.85, 0.15])
-    
-    with col_input:
-        user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...", key="chat_input_field")
-        
-    with col_btn:
-        # زر رفع الملفات (اختيار ملفات بجميع أنواعها)
-        uploaded_file = st.file_uploader("📁", type=None, label_visibility="collapsed", key="file_upload_btn")
+# 7. شريط إدخال الرسائل والمرفقات (كبسة + بجانب صندوق الكتابة)
+uploaded_file = st.file_uploader("➕ مرفق", type=None, label_visibility="collapsed", key="upload_file_plus")
 
-# معالجة إرسال الرسالة أو الملف
+user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
+
+# معالجة الإدخال
 final_query = ""
 if uploaded_file is not None:
     file_info = f"[تم إرفاق ملف: {uploaded_file.name}]"
     if user_input:
         final_query = f"{user_input} {file_info}"
     else:
-        final_query = f"مرحباً رداد، لقد قمنا بإرفاق هذا الملف: {uploaded_file.name}"
+        final_query = f"مرحباً رداد، قمت بإرفاق الملف التالي: {uploaded_file.name}"
 elif user_input:
     final_query = user_input
 
@@ -164,7 +197,7 @@ if final_query:
     st.session_state.messages.append({"role": "user", "content": final_query})
     st.rerun()
 
-# منطق توليد الرد عبر نموذج Gemini (مع الحفاظ على الموديل المطلوب gemini-3.6-flash)
+# 8. توليد الرد بـ Gemini Stream (نفس الموديل gemini-3.6-flash)
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     last_user_query = st.session_state.messages[-1]["content"]
     
