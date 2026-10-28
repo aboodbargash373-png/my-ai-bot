@@ -4,6 +4,65 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title=" - Raddad  AI - ", page_icon="⚡", layout="centered")
 
+import streamlit as st
+
+# 1. إعدادات الصفحة (يُفضل تكون أول س امر بعد الـ import)
+st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
+
+# 2. **هون تحط كود الـ CSS** (أول الكود عشان يتطبق صح)
+st.markdown("""
+    <style>
+    .chat-row {
+        display: flex;
+        margin-bottom: 10px;
+        width: 100%;
+    }
+    .chat-row.user {
+        justify-content: flex-end;
+    }
+    .chat-row.assistant {
+        justify-content: flex-start;
+    }
+    .chat-bubble {
+        max-width: 70%;
+        padding: 10px 15px;
+        border-radius: 15px;
+        font-size: 16px;
+        line-height: 1.4;
+    }
+    .user-bubble {
+        background-color: #005c4b;
+        color: white;
+        border-bottom-right-radius: 2px;
+    }
+    .assistant-bubble {
+        background-color: #202c33;
+        color: white;
+        border-bottom-left-radius: 2px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# 3. بعدين بتحط باقي كود التطبيق وعرض الرسائل والمنطق تبع الشات تحت
+st.markdown("<h1 style='text-align: center;'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
+
+# مثال على عرض الرسائل
+st.markdown("""
+    <div class="chat-row assistant">
+        <div class="chat-bubble assistant-bubble">
+            ⚡ أهلين فيك! كيف بقدر أساعدك اليوم؟
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+    <div class="chat-row user">
+        <div class="chat-bubble user-bubble">
+            مرحباً رداد
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
 # 2. تصميم CSS
 st.markdown("""
 <style>
