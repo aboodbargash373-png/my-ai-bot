@@ -1,68 +1,80 @@
-import streamlit as str_lit
+import streamlit as st
 from google import genai
 
 # 1. إعدادات الصفحة
-str_lit.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
+st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات (ألوان تعبر عن الثيم مع تدرجات خلفية فخمة)
+# 2. درجات ألوان الثيمات (تدرجات الخلفية ولون الزر والفقاعات)
 THEMES = {
     "pistachio": {
         "accent": "#558b2f",
         "user_bg": "#558b2f",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #162214 100%)",
         "sidebar_bg": "#121a11",
-        "card_bg": "linear-gradient(135deg, #558b2f 0%, #0d1117 100%)"
+        "color": "#558b2f"
     },
     "burgundy": {
         "accent": "#a91d3a",
         "user_bg": "#800020",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #251015 100%)",
         "sidebar_bg": "#1a1012",
-        "card_bg": "linear-gradient(135deg, #800020 0%, #0d1117 100%)"
+        "color": "#800020"
     },
     "sky_white": {
         "accent": "#00b4d8",
         "user_bg": "#0096c7",
         "bg_gradient": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
         "sidebar_bg": "#0b1329",
-        "card_bg": "linear-gradient(135deg, #00b4d8 0%, #0f172a 100%)"
+        "color": "#00b4d8"
     }
 }
 
 # تهيئة الثيم الافتراضي
-if "selected_theme_key" not in str_lit.session_state:
-    str_lit.session_state.selected_theme_key = "pistachio"
+if "selected_theme_key" not in st.session_state:
+    st.session_state.selected_theme_key = "pistachio"
 
-# إنشاء قائمة Themes في الشريط الجانبي على شكل أزرار دوائر/بطاقات ألوان ملونة بدون كلام
-str_lit.sidebar.title("Themes 🎨")
-cols = str_lit.sidebar.columns(3)
+# 3. عرض دوائر الألوان في الشريط الجانبي (Themes) بحيث الضغط يتم على الدائرة نفسها
+st.sidebar.title("Themes 🎨")
+cols = st.sidebar.columns(3)
 theme_keys = list(THEMES.keys())
 
 for idx, t_key in enumerate(theme_keys):
     with cols[idx]:
-        is_selected = str_lit.session_state.selected_theme_key == t_key
-        border_style = "3px solid #ffffff" if is_selected else "1px solid #444444"
-        card_html = f"""
+        is_selected = st.session_state.selected_theme_key == t_key
+        border_val = "3px solid #ffffff" if is_selected else "2px solid transparent"
+        
+        # استخدام st.markdown مع رابط تفاعلي أو زر شفاف فوق الدائرة تماماً لضمان سهولة الكبس
+        st.markdown(f"""
             <div style="
-                background: {THEMES[t_key]['card_bg']};
-                height: 55px;
+                width: 45px;
+                height: 45px;
                 border-radius: 50%;
-                border: {border_style};
+                background-color: {THEMES[t_key]['color']};
+                border: {border_val};
                 box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-                margin-bottom: 5px;
+                margin: 0 auto;
                 cursor: pointer;
             "></div>
-        """
-        str_lit.markdown(card_html, unsafe_allow_html=True)
-        if str_lit.button(" ", key=f"btn_t_{t_key}", use_container_width=True):
-            str_lit.session_state.selected_theme_key = t_key
-            str_lit.rerun()
+        """, unsafe_allow_html=True)
+        
+        if st.button("اختر", key=f"circle_btn_{t_key}", use_container_width=True):
+            st.session_state.selected_theme_key = t_key
+            st.rerun()
 
-active_theme = THEMES[str_lit.session_state.selected_theme_key]
+active_theme = THEMES[st.session_state.selected_theme_key]
 
-# 3. حقن الـ CSS لتنسيق الواجهة ومحاذاة زر المشبك (📎) بدقة بجانب صندوق الكتابة بالأسفل
-str_lit.markdown(f"""
+# 4. حقن الـ CSS لتنسيق الواجهة ومحاذاة زر علامة الزائد (+) بمنتصف الدائرة وبجانب صندوق الكتابة
+st.markdown(f"""
 <style>
+    /* إخفاء نصوص أزرة الدوائر لتكون نظيفة 100% */
+    div[data-testid="stSidebar"] button {{
+        background: transparent !important;
+        border: none !important;
+        color: transparent !important;
+        height: 45px !important;
+        margin-top: -45px !important;
+    }}
+
     /* خلفية التطبيق الشاملة */
     .stApp {{
         background: {active_theme['bg_gradient']};
@@ -127,7 +139,7 @@ str_lit.markdown(f"""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }}
 
-    /* تثبيت صندوق الكتابة في أسفل الشاشة تماماً بدون أن يرتفع للمنتصف */
+    /* تثبيت صندوق الكتابة في أسفل الشاشة تماماً */
     div[data-testid="stChatInput"] {{
         position: fixed !important;
         bottom: 15px !important;
@@ -138,7 +150,7 @@ str_lit.markdown(f"""
         z-index: 999;
     }}
 
-    /* وضع زر المشبك (📎) ملاصق تماماً لصندوق الكتابة من جهة اليسار وعلى نفس السطر بالأسفل */
+    /* وضع زر رفع الملفات (بعلامة الزائد +) ملاصق تماماً لصندوق الكتابة من جهة اليسار بالأسفل */
     div[data-testid="stFileUploader"] {{
         position: fixed !important;
         bottom: 20px !important;
@@ -172,27 +184,29 @@ str_lit.markdown(f"""
         display: none !important;
     }}
     
-    /* أيقونة المشبك الفعلية (📎) بمنتصف الدائرة تماماً */
+    /* علامة الزائد (+) في منتصف الدائرة تماماً وبدقة */
     div[data-testid="stFileUploader"] section::after {{
-        content: "📎";
-        font-size: 18px;
+        content: "+";
+        font-size: 22px;
+        font-weight: bold;
+        color: #ffffff;
         display: flex;
         align-items: center;
         justify-content: center;
         width: 100%;
         height: 100%;
-        margin-top: 1px;
+        margin-top: -1px;
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# 4. إعداد مفتاح API والـ Client
-API_KEY = str_lit.secrets.get("GEMINI_API_KEY")
+# 5. إعداد مفتاح API والـ Client
+API_KEY = st.secrets.get("GEMINI_API_KEY")
 if not API_KEY:
-    str_lit.error("⚠️ يرجى إضافة GEMINI_API_KEY في Streamlit Secrets.")
-    str_lit.stop()
+    st.error("⚠️ يرجى إضافة GEMINI_API_KEY في Streamlit Secrets.")
+    st.stop()
 
-@str_lit.cache_resource
+@st.cache_resource
 def get_gemini_client():
     return genai.Client(api_key=API_KEY)
 
@@ -200,7 +214,7 @@ client = get_gemini_client()
 
 SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِي لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية.,جاوب بلغت المستخدم الي سالك فيها"
 
-# 5. الدوال الخاصة بالسيستم (RAG والطلبات)
+# 6. الدوال الخاصة بالسيستم (RAG والطلبات)
 def check_order_status(order_id: str) -> str:
     db = {
         "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
@@ -220,7 +234,7 @@ def search_company_rag(query: str) -> str:
     knowledge_base = [
         "سياسة الإرجاع: يمكن إرجاع أي منتج خلال 14 يوم من تاريخ الشراء بشرط أن يكون بحالته الأصلية.",
         "أوقات العمل: دعم عملاء رداد يعمل على مدار الساعة 24/7 طوال أيام الأسبوع.",
-        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلام."
+        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلاستلام."
     ]
     for doc in knowledge_base:
         if any(w in query.lower() for w in doc.lower().split() if len(w) > 3):
@@ -228,16 +242,16 @@ def search_company_rag(query: str) -> str:
     return ""
 
 # تهيئة الذاكرة
-if "messages" not in str_lit.session_state:
-    str_lit.session_state.messages = [{"role": "assistant", "content": "مرحباً بك! ⚡ أنا **RADDAD**. كيف أستطيع مساعدتك اليوم؟"}]
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "assistant", "content": "مرحباً بك! ⚡ أنا **RADDAD**. كيف أستطيع مساعدتك اليوم؟"}]
 
 # عرض العنوان الرئيسي
-str_lit.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
 
-# 6. عرض المحادثات بتنسيق الـ HTML المخصص (يمين للمستخدم ويسار للبوت)
-for msg in str_lit.session_state.messages:
+# 7. عرض المحادثات بتنسيق الـ HTML المخصص (يمين للمستخدم ويسار للبوت)
+for msg in st.session_state.messages:
     if msg["role"] == "user":
-        str_lit.markdown(f"""
+        st.markdown(f"""
             <div class="chat-row-user">
                 <div class="chat-bubble user-bubble">
                     {msg["content"]}
@@ -245,7 +259,7 @@ for msg in str_lit.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
     else:
-        str_lit.markdown(f"""
+        st.markdown(f"""
             <div class="chat-row-assistant">
                 <div class="chat-bubble assistant-bubble">
                     {msg["content"]}
@@ -253,9 +267,9 @@ for msg in str_lit.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 7. واجهة الإدخال ورفع الملفات بمشبك (📎) مجاور لصندوق الكتابة تماماً بالأسفل
-uploaded_file = str_lit.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
-user_input = str_lit.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
+# 8. واجهة الإدخال ورفع الملفات بعلامة الزائد (+) مجاور لصندوق الكتابة تماماً بالأسفل
+uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
+user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
 # معالجة الإدخال
 final_query = ""
@@ -269,12 +283,12 @@ elif user_input:
     final_query = user_input
 
 if final_query:
-    str_lit.session_state.messages.append({"role": "user", "content": final_query})
-    str_lit.rerun()
+    st.session_state.messages.append({"role": "user", "content": final_query})
+    st.rerun()
 
-# 8. توليد الرد من Gemini (مع الحفاظ على الموديل gemini-3.6-flash)
-if str_lit.session_state.messages and str_lit.session_state.messages[-1]["role"] == "user":
-    last_user_query = str_lit.session_state.messages[-1]["content"]
+# 9. توليد الرد من Gemini (مع الحفاظ على الموديل gemini-3.6-flash)
+if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
+    last_user_query = st.session_state.messages[-1]["content"]
     
     extra_context = ""
     for code in ["ORD-101", "ORD-202", "ORD-303"]:
@@ -306,7 +320,7 @@ if str_lit.session_state.messages and str_lit.session_state.messages[-1]["role"]
             if chunk.text:
                 full_res += chunk.text
 
-        str_lit.session_state.messages.append({"role": "assistant", "content": full_res})
-        str_lit.rerun()
+        st.session_state.messages.append({"role": "assistant", "content": full_res})
+        st.rerun()
     except Exception as e:
-        str_lit.error(f"حدث خطأ: {e}")
+        st.error(f"حدث خطأ: {e}")
