@@ -4,37 +4,37 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات الشاملة (الخلفية، لون التميز والعنوان، وفقاعات المستخدم)
+# 2. درجات ألوان الثيمات (بالألوان فقط بدون أسماء نصية، وتم ضبط السماوي والأبيض)
 THEMES = {
-    "فستقي وأسود (الافتراضي)": {
+    "🟢 ⬛ فستقي وأسود (الافتراضي)": {
         "accent": "#558b2f",
         "user_bg": "#558b2f",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #162214 100%)",
         "sidebar_bg": "#121a11"
     },
-    "برغندي وأسود": {
+    "🔴 ⬛ برغندي وأسود": {
         "accent": "#a91d3a",
         "user_bg": "#800020",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #251015 100%)",
         "sidebar_bg": "#1a1012"
     },
-    "خمري وأسود": {
-        "accent": "#8c1c32",
-        "user_bg": "#7a1c2e",
-        "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #221014 100%)",
-        "sidebar_bg": "#181012"
+    "🔵 ⚪ أزرق سماوي وأبيض": {
+        "accent": "#00b4d8",
+        "user_bg": "#0096c7",
+        "bg_gradient": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+        "sidebar_bg": "#0b1329"
     }
 }
 
-# اختيار الثيم من الـ Sidebar
+# اختيار الثيم من الـ Sidebar (بالألوان فقط)
 st.sidebar.title("إعدادات الثيم 🎨")
-selected_theme_name = st.sidebar.selectbox("اختر الثيم المفضّل:", list(THEMES.keys()), index=0)
+selected_theme_name = st.sidebar.selectbox("اختر الثيم المفضّل:", list(THEMES.keys()), index=0, label_visibility="collapsed")
 active_theme = THEMES[selected_theme_name]
 
-# 3. حقن الـ CSS المخصص لتغيير الثيم بالكامل وتوسيط علامة الزائد (+) داخل الدائرة بدقة
+# 3. حقن الـ CSS لتنسيق الواجهة بالكامل وتوسيط علامة الزائد (+) بدقة
 st.markdown(f"""
 <style>
-    /* خلفية التطبيق الشاملة بتدرج فخم يتناسب مع الثيم المختار */
+    /* خلفية التطبيق الشاملة */
     .stApp {{
         background: {active_theme['bg_gradient']};
         color: #c9d1d9;
@@ -45,7 +45,7 @@ st.markdown(f"""
         background-color: {active_theme['sidebar_bg']};
     }}
 
-    /* العنوان الرئيسي بلون الثيم */
+    /* العنوان الرئيسي */
     .cyber-title {{
         font-size: 2.2rem;
         font-weight: bold;
@@ -82,7 +82,7 @@ st.markdown(f"""
         word-wrap: break-word;
     }}
 
-    /* فقاعة المستخدم تأخذ لون الثيم المختار بالكامل */
+    /* فقاعة المستخدم بلون الثيم المختار */
     .user-bubble {{
         background-color: {active_theme['user_bg']} !important;
         color: #ffffff !important;
@@ -98,43 +98,47 @@ st.markdown(f"""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }}
 
-    /* تصميم زر رفع الملفات لتكون علامة (+) في منتصف الدائرة تماماً وبشكل احترافي */
-    div[data-testid="stFileUploader"] {{
-        margin-bottom: -10px;
+    /* تثبيت شريط الإدخال في الأسفل وتنسيق زر (+) وجعله بمنتصف الدائرة تماماً */
+    div[data-testid="stChatInput"] {{
+        bottom: 20px !important;
     }}
+
+    div[data-testid="stFileUploader"] {{
+        position: fixed;
+        bottom: 26px;
+        z-index: 99999;
+        width: 42px !important;
+    }}
+    
     div[data-testid="stFileUploader"] section {{
         padding: 0px !important;
         border-radius: 50% !important;
-        width: 44px !important;
-        height: 44px !important;
-        min-height: 44px !important;
+        width: 42px !important;
+        height: 42px !important;
+        min-height: 42px !important;
         background-color: #21262d !important;
         border: 1px solid {active_theme['accent']} !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         cursor: pointer;
-        transition: all 0.3s ease;
     }}
-    div[data-testid="stFileUploader"] section:hover {{
-        background-color: {active_theme['accent']} !important;
-    }}
+    
     div[data-testid="stFileUploader"] section span {{
         display: none !important;
     }}
-    /* ضمان توسط علامة الزائد تماماً في مركز الدائرة */
+    
+    /* توسط علامة الزائد بدقة مئوية داخل الدائرة */
     div[data-testid="stFileUploader"] section::after {{
         content: "+";
         font-size: 24px;
         font-weight: bold;
         color: #ffffff;
-        line-height: 1;
         display: flex;
         align-items: center;
         justify-content: center;
         width: 100%;
         height: 100%;
-        margin-top: -2px;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -206,14 +210,9 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 7. واجهة الإدخال وزر رفع الملفات (علامة الزائد في المنتصف تماماً)
-col_plus, col_input = st.columns([0.1, 0.9])
-
-with col_plus:
-    uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
-
-with col_input:
-    user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
+# 7. واجهة الإدخال الأساسية ورفع الملفات
+uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
+user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
 # معالجة الإدخال
 final_query = ""
