@@ -4,7 +4,7 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات (الثيم السماوي صار أزرق سماوي فاح وأبيض صافي)
+# 2. درجات ألوان الثيمات (الثيم السماوي صار أزرق فاتح مدرج للأبيض النقي)
 THEMES = {
     "pistachio": {
         "accent": "#558b2f",
@@ -18,31 +18,24 @@ THEMES = {
         "user_bg": "#800020",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #251015 100%)",
         "sidebar_bg": "#1a1012",
-        "card_bg": "linear-gradient(180deg, #800020 0%, #0d1117 100%)"
+        "card_bg": "linear-gradient(180deg, #a91d3a 0%, #0d1117 100%)"
     },
     "sky_white": {
-        "accent": "#00b4d8",
-        "user_bg": "#0096c7",
+        "accent": "#38bdf8",
+        "user_bg": "#0284c7",
         "bg_gradient": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
         "sidebar_bg": "#0b1329",
-        "card_bg": "linear-gradient(180deg, #00b4d8 0%, #ffffff 100%)"
+        "card_bg": "linear-gradient(180deg, #38bdf8 0%, #ffffff 100%)"
     }
 }
 
-# تهيئة الثيم الافتراضي
+# تهيئة الثيم الافتراضي في session_state
 if "selected_theme_key" not in st.session_state:
     st.session_state.selected_theme_key = "pistachio"
 
-# التبديل الفوري عبر query_params لتجنب أي مشاكل
-query_params = st.query_params
-if "theme" in query_params:
-    t_val = query_params["theme"]
-    if t_val in THEMES:
-        st.session_state.selected_theme_key = t_val
-
 active_theme = THEMES[st.session_state.selected_theme_key]
 
-# 3. عرض بطاقات الألوان في الشريط الجانبي
+# 3. عرض بطاقات الثيمات في الشريط الجانبي (Themes) مع زر شفاف لتنفيذ st.rerun الفوري بدون إعادة تحميل المتصفح
 st.sidebar.title("Themes 🎨")
 
 cols = st.sidebar.columns(3)
@@ -51,25 +44,45 @@ theme_keys = list(THEMES.keys())
 for idx, t_key in enumerate(theme_keys):
     with cols[idx]:
         is_selected = st.session_state.selected_theme_key == t_key
-        border_val = "3px solid #ffffff" if is_selected else "1px solid rgba(255,255,255,0.2)"
+        # إطار أبيض واضح وفخم للبطاقة المختارة (مثل الصورة)
+        border_style = "3px solid #ffffff" if is_selected else "1px solid rgba(255,255,255,0.2)"
+        box_shadow = "0 0 15px rgba(255,255,255,0.4)" if is_selected else "0 4px 10px rgba(0,0,0,0.4)"
         
+        # رسم البطاقة الملونة
         card_code = f"""
-            <a href="?theme={t_key}" target="_self" style="text-decoration: none;">
-                <div style="
-                    background: {THEMES[t_key]['card_bg']};
-                    height: 85px;
-                    border-radius: 14px;
-                    border: {border_val};
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-                    cursor: pointer;
-                "></div>
-            </a>
+            <div style="
+                background: {THEMES[t_key]['card_bg']};
+                height: 95px;
+                border-radius: 16px;
+                border: {border_style};
+                box-shadow: {box_shadow};
+                margin-bottom: -95px;
+                pointer-events: none;
+            "></div>
         """
         st.markdown(card_code, unsafe_allow_html=True)
+        
+        # زر شفاف يغطي البطاقة تماماً لتغيير الثيم فوراً وبدون ريفرش
+        if st.button("", key=f"theme_card_btn_{t_key}", use_container_width=True):
+            st.session_state.selected_theme_key = t_key
+            st.rerun()
 
-# 4. حقن الـ CSS وضبط محاذاة زر (+) ليكون متناسقاً تماماً بجانب صندوق الكتابة
+# 4. حقن الـ CSS بالكامل لتنسيق الواجهة والمحاذاة
 st.markdown(f"""
 <style>
+    /* جعل أزرار الستريمليت شفافة فوق البطاقات تماماً وبدون أي عوائق */
+    div[data-testid="stSidebar"] div[data-testid="stButton"] button {{
+        background-color: transparent !important;
+        border: none !important;
+        height: 95px !important;
+        width: 100% !important;
+        cursor: pointer !important;
+    }}
+    div[data-testid="stSidebar"] div[data-testid="stButton"] button:hover {{
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 16px !important;
+    }}
+
     /* خلفية التطبيق الشاملة */
     .stApp {{
         background: {active_theme['bg_gradient']};
@@ -229,7 +242,7 @@ def search_company_rag(query: str) -> str:
     knowledge_base = [
         "سياسة الإرجاع: يمكن إرجاع أي منتج خلال 14 يوم من تاريخ الشراء بشرط أن يكون بحالته الأصلية.",
         "أوقات العمل: دعم عملاء رداد يعمل على مدار الساعة 24/7 طوال أيام الأسبوع.",
-        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلاستلام."
+        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلام."
     ]
     for doc in knowledge_base:
         if any(w in query.lower() for w in doc.lower().split() if len(w) > 3):
