@@ -112,7 +112,7 @@ st.markdown(f"""
         left: calc(50% - 310px); /* محاذاة زر المشبك بجانب صندوق الكتابة بدقة */
         z-index: 99999;
         width: 44px !important;
-    }
+    }}
     
     @media (max-width: 768px) {{
         div[data-testid="stFileUploader"] {{
