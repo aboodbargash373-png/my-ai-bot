@@ -4,7 +4,7 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات وبطاقاتها
+# 2. درجات ألوان الثيمات
 THEMES = {
     "pistachio": {
         "accent": "#558b2f",
@@ -29,20 +29,13 @@ THEMES = {
     }
 }
 
-# تهيئة الثيم الافتراضي
+# تهيئة الثيم الافتراضي في session_state
 if "selected_theme_key" not in st.session_state:
     st.session_state.selected_theme_key = "pistachio"
 
-# التقاط التغيير عبر الـ Query Params لضمان الاستجابة الفورية عند الضغط على البطاقة الملونة
-query_params = st.query_params
-if "theme" in query_params:
-    t_val = query_params["theme"]
-    if t_val in THEMES:
-        st.session_state.selected_theme_key = t_val
-
 active_theme = THEMES[st.session_state.selected_theme_key]
 
-# 3. عرض بطاقات الألوان في الـ Sidebar كروابط/أزرار ملونة حقيقية 100%
+# 3. عرض بطاقات الألوان بداخل الـ Sidebar مع زِر شفاف لتنفيذ st.rerun() الداخلي السريع
 st.sidebar.title("Themes 🎨")
 
 cols = st.sidebar.columns(3)
@@ -53,25 +46,41 @@ for idx, t_key in enumerate(theme_keys):
         is_selected = st.session_state.selected_theme_key == t_key
         border_val = "3px solid #ffffff" if is_selected else "1px solid rgba(255,255,255,0.2)"
         
-        # استخدام رابط HTML بتصميم بطاقة ملونة يغير الثيم فوراً عند النقر عليه
+        # رسم البطاقة الملونة بـ HTML
         card_code = f"""
-            <a href="?theme={t_key}" target="_self" style="text-decoration: none;">
-                <div style="
-                    background: {THEMES[t_key]['card_bg']};
-                    height: 85px;
-                    border-radius: 14px;
-                    border: {border_val};
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-                    cursor: pointer;
-                    transition: transform 0.1s ease;
-                "></div>
-            </a>
+            <div style="
+                background: {THEMES[t_key]['card_bg']};
+                height: 85px;
+                border-radius: 14px;
+                border: {border_val};
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                margin-bottom: -85px;
+                pointer-events: none;
+            "></div>
         """
         st.markdown(card_code, unsafe_allow_html=True)
+        
+        # زر شفاف مطبق فوق بطاقة اللون تماماً لمنع إعادة تحميل الصفحة بالكامل
+        if st.button("", key=f"fast_theme_{t_key}", use_container_width=True):
+            st.session_state.selected_theme_key = t_key
+            st.rerun()
 
-# 4. حقن الـ CSS لتطبيق ألوان الثيم الشاملة وتثبيت عناصر المحادثة وزر (+)
+# 4. حقن الـ CSS
 st.markdown(f"""
 <style>
+    /* جعل أزرار الستريمليت فوق البطاقات شفافة تماماً */
+    div[data-testid="stSidebar"] div[data-testid="stButton"] button {{
+        background-color: transparent !important;
+        border: none !important;
+        height: 85px !important;
+        width: 100% !important;
+        cursor: pointer !important;
+    }}
+    div[data-testid="stSidebar"] div[data-testid="stButton"] button:hover {{
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        border-radius: 14px !important;
+    }}
+
     /* خلفية التطبيق الشاملة */
     .stApp {{
         background: {active_theme['bg_gradient']};
@@ -120,7 +129,7 @@ st.markdown(f"""
         word-wrap: break-word;
     }}
 
-    /* فقاعة المستخدم بلون الثيم المختار */
+    /* فقاعة المستخدم */
     .user-bubble {{
         background-color: {active_theme['user_bg']} !important;
         color: #ffffff !important;
@@ -136,7 +145,7 @@ st.markdown(f"""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }}
 
-    /* تثبيت صندوق الكتابة في أسفل الشاشة تماماً */
+    /* تثبيت صندوق الكتابة بالأسفل */
     div[data-testid="stChatInput"] {{
         position: fixed !important;
         bottom: 15px !important;
