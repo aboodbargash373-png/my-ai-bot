@@ -4,7 +4,7 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات (تدرجات الخلفية ولون الزر والفقاعات)
+# 2. درجات ألوان الثيمات
 THEMES = {
     "pistachio": {
         "accent": "#558b2f",
@@ -29,52 +29,25 @@ THEMES = {
     }
 }
 
-# تهيئة الثيم الافتراضي
+# 3. استخدام Radio button مخصص مخفي تماماً لتصير الدوائر نفسها هي الكبسات بدون مربعات رمادية
+st.sidebar.title("Themes 🎨")
+
+# تعيين الخيار الافتراضي
 if "selected_theme_key" not in st.session_state:
     st.session_state.selected_theme_key = "pistachio"
 
-# 3. عرض دوائر الألوان في الشريط الجانبي (Themes) بحيث الضغط يتم على الدائرة نفسها
-st.sidebar.title("Themes 🎨")
-cols = st.sidebar.columns(3)
-theme_keys = list(THEMES.keys())
+selected_theme_key = st.sidebar.radio(
+    "Themes",
+    options=list(THEMES.keys()),
+    index=list(THEMES.keys()).index(st.session_state.selected_theme_key),
+    label_visibility="collapsed"
+)
+st.session_state.selected_theme_key = selected_theme_key
+active_theme = THEMES[selected_theme_key]
 
-for idx, t_key in enumerate(theme_keys):
-    with cols[idx]:
-        is_selected = st.session_state.selected_theme_key == t_key
-        border_val = "3px solid #ffffff" if is_selected else "2px solid transparent"
-        
-        # استخدام st.markdown مع رابط تفاعلي أو زر شفاف فوق الدائرة تماماً لضمان سهولة الكبس
-        st.markdown(f"""
-            <div style="
-                width: 45px;
-                height: 45px;
-                border-radius: 50%;
-                background-color: {THEMES[t_key]['color']};
-                border: {border_val};
-                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-                margin: 0 auto;
-                cursor: pointer;
-            "></div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("اختر", key=f"circle_btn_{t_key}", use_container_width=True):
-            st.session_state.selected_theme_key = t_key
-            st.rerun()
-
-active_theme = THEMES[st.session_state.selected_theme_key]
-
-# 4. حقن الـ CSS لتنسيق الواجهة ومحاذاة زر علامة الزائد (+) بمنتصف الدائرة وبجانب صندوق الكتابة
+# 4. حقن الـ CSS لتطبيق الثيم بالكامل + تحويل خيارات الراديو إلى دوائر ملونة صافية 100%
 st.markdown(f"""
 <style>
-    /* إخفاء نصوص أزرة الدوائر لتكون نظيفة 100% */
-    div[data-testid="stSidebar"] button {{
-        background: transparent !important;
-        border: none !important;
-        color: transparent !important;
-        height: 45px !important;
-        margin-top: -45px !important;
-    }}
-
     /* خلفية التطبيق الشاملة */
     .stApp {{
         background: {active_theme['bg_gradient']};
@@ -84,6 +57,60 @@ st.markdown(f"""
     /* الشريط الجانبي */
     [data-testid="stSidebar"] {{
         background-color: {active_theme['sidebar_bg']};
+    }}
+
+    /* تحويل خيارات الراديو في السايدبار إلى دوائر ملونة فقط وإلغاء أي مربعات رمادية */
+    div[data-testid="stRadio"] > div {{
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-around !important;
+        gap: 10px !important;
+    }}
+
+    div[data-testid="stRadio"] label {{
+        padding: 0 !important;
+        margin: 0 !important;
+        cursor: pointer !important;
+    }}
+
+    div[data-testid="stRadio"] label > div:first-child {{
+        display: none !important; /* إخفاء نقطة اختيار الراديو العادية */
+    }}
+
+    /* الدائرة الأولى (فستقي) */
+    div[data-testid="stRadio"] label:nth-child(1) div[data-testid="stMarkdownContainer"] p {{
+        width: 45px !important;
+        height: 45px !important;
+        background-color: #558b2f !important;
+        border-radius: 50% !important;
+        font-size: 0px !important;
+        border: {"3px solid #ffffff" if selected_theme_key == "pistachio" else "2px solid transparent"} !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        transition: all 0.2s ease;
+    }}
+
+    /* الدائرة الثانية (برغندي) */
+    div[data-testid="stRadio"] label:nth-child(2) div[data-testid="stMarkdownContainer"] p {{
+        width: 45px !important;
+        height: 45px !important;
+        background-color: #800020 !important;
+        border-radius: 50% !important;
+        font-size: 0px !important;
+        border: {"3px solid #ffffff" if selected_theme_key == "burgundy" else "2px solid transparent"} !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        transition: all 0.2s ease;
+    }}
+
+    /* الدائرة الثالثة (سماوي) */
+    div[data-testid="stRadio"] label:nth-child(3) div[data-testid="stMarkdownContainer"] p {{
+        width: 45px !important;
+        height: 45px !important;
+        background-color: #00b4d8 !important;
+        border-radius: 50% !important;
+        font-size: 0px !important;
+        border: {"3px solid #ffffff" if selected_theme_key == "sky_white" else "2px solid transparent"} !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        transition: all 0.2s ease;
     }}
 
     /* العنوان الرئيسي */
@@ -150,7 +177,7 @@ st.markdown(f"""
         z-index: 999;
     }}
 
-    /* وضع زر رفع الملفات (بعلامة الزائد +) ملاصق تماماً لصندوق الكتابة من جهة اليسار بالأسفل */
+    /* زر رفع الملفات (+): يوضع بجانب صندوق الكتابة بالأسفل مباشرة في المنتصف */
     div[data-testid="stFileUploader"] {{
         position: fixed !important;
         bottom: 20px !important;
@@ -184,10 +211,10 @@ st.markdown(f"""
         display: none !important;
     }}
     
-    /* علامة الزائد (+) في منتصف الدائرة تماماً وبدقة */
+    /* علامة الزائد (+) متمركزة في منتصف الدائرة تماماً */
     div[data-testid="stFileUploader"] section::after {{
         content: "+";
-        font-size: 22px;
+        font-size: 24px;
         font-weight: bold;
         color: #ffffff;
         display: flex;
@@ -195,7 +222,7 @@ st.markdown(f"""
         justify-content: center;
         width: 100%;
         height: 100%;
-        margin-top: -1px;
+        margin-top: -2px;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -234,7 +261,7 @@ def search_company_rag(query: str) -> str:
     knowledge_base = [
         "سياسة الإرجاع: يمكن إرجاع أي منتج خلال 14 يوم من تاريخ الشراء بشرط أن يكون بحالته الأصلية.",
         "أوقات العمل: دعم عملاء رداد يعمل على مدار الساعة 24/7 طوال أيام الأسبوع.",
-        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلاستلام."
+        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلام."
     ]
     for doc in knowledge_base:
         if any(w in query.lower() for w in doc.lower().split() if len(w) > 3):
@@ -267,7 +294,7 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 8. واجهة الإدخال ورفع الملفات بعلامة الزائد (+) مجاور لصندوق الكتابة تماماً بالأسفل
+# 8. واجهة الإدخال ورفع الملفات بعلامة (+) متمركزة ومجاورة لـ chat_input
 uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
 user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
