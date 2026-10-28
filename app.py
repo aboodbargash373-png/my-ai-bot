@@ -4,7 +4,7 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات الثلاثة المطلوبة
+# 2. درجات ألوان الثيمات الثلاثة المطلوبة (الفستقي هو الافتراضي)
 THEMES = {
     "فستقي وأسود (الافتراضي)": {
         "user_bg": "#558b2f",
@@ -20,15 +20,15 @@ THEMES = {
     }
 }
 
-# اختيار الثيم من الـ Sidebar
+# اختيار الثيم من الـ Sidebar مع تحديث الـ session_state فوراً
 st.sidebar.title("إعدادات الثيم 🎨")
 selected_theme_name = st.sidebar.selectbox("اختر الثيم المفضّل:", list(THEMES.keys()), index=0)
 active_theme = THEMES[selected_theme_name]
 
-# 3. حقن الـ CSS لتطبيق الثيم ديناميكياً وتنسيق الرسائل (يمين وشمال)
+# 3. حقن الـ CSS لتطبيق الثيم ديناميكياً وتنسيق زر الرفع بعلامة (+) واضحة
 st.markdown(f"""
 <style>
-    /* خلفية التطبيق والعنوان */
+    /* خلفية التطبيق والعنوان الرئيسي */
     .stApp {{ background-color: #0d1117; color: #c9d1d9; }}
     .cyber-title {{ font-size: 2.2rem; font-weight: bold; text-align: center; color: {active_theme['accent']}; margin-bottom: 25px; }}
 
@@ -73,24 +73,30 @@ st.markdown(f"""
         border-bottom-left-radius: 4px;
     }}
 
-    /* تصميم زر (+) المرفقات وإخفاء البريد/الرابط الخاص بزر الرفع الافتراضي */
+    /* تصميم زر رفع الملفات ليصبح دائرياً مع علامة (+) واضحة لرفع الصور والملفات */
     div[data-testid="stFileUploader"] {{
-        margin-bottom: -15px;
+        margin-bottom: -10px;
     }}
     div[data-testid="stFileUploader"] section {{
-        padding: 4px 10px !important;
+        padding: 0px !important;
         border-radius: 50% !important;
-        width: 42px !important;
-        height: 42px !important;
-        min-height: 42px !important;
+        width: 44px !important;
+        height: 44px !important;
+        min-height: 44px !important;
         background-color: #21262d !important;
         border: 1px solid #30363d !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        cursor: pointer;
     }}
+    /* إخفاء النصوص الافتراضية وإظهار علامة الزائد بوضوح */
     div[data-testid="stFileUploader"] section span {{
         display: none !important;
+    }}
+    div[data-testid="stFileUploader"] section::after {{
+        content: "➕";
+        font-size: 18px;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -162,12 +168,11 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 7. واجهة الإدخال وزر (+) المرفقات المدمج
+# 7. واجهة الإدخال وزر رفع الملفات والصور المزود بعلامة (+) الواضحة
 col_plus, col_input = st.columns([0.1, 0.9])
 
 with col_plus:
-    # زر رفع الملفات بشخصية زر (+) دائرية بأسلوب تطبيقات الشات الحديثة
-    uploaded_file = st.file_uploader("➕", type=None, label_visibility="collapsed", key="file_plus_input")
+    uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
 
 with col_input:
     user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
@@ -175,11 +180,11 @@ with col_input:
 # معالجة الإدخال
 final_query = ""
 if uploaded_file is not None:
-    file_info = f"[تم إرفاق ملف: {uploaded_file.name}]"
+    file_info = f"[تم إرفاق ملف/صورة: {uploaded_file.name}]"
     if user_input:
         final_query = f"{user_input} {file_info}"
     else:
-        final_query = f"مرحباً رداد، قمت بإرفاق هذا الملف: {uploaded_file.name}"
+        final_query = f"مرحباً رداد، قمت بإرفاق هذا الملف/الصورة: {uploaded_file.name}"
 elif user_input:
     final_query = user_input
 
