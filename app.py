@@ -1,65 +1,67 @@
-import streamlit as st
+import streamlit as str_lit
 from google import genai
 
 # 1. إعدادات الصفحة
-st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
+str_lit.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. تعريف درجات الألوان وتصميم بطاقات الثيمات (Themes)
+# 2. درجات ألوان الثيمات (ألوان تعبر عن الثيم مع تدرجات خلفية فخمة)
 THEMES = {
     "pistachio": {
         "accent": "#558b2f",
         "user_bg": "#558b2f",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #162214 100%)",
         "sidebar_bg": "#121a11",
-        "card_gradient": "linear-gradient(180deg, #558b2f 0%, #0d1117 100%)"
+        "card_bg": "linear-gradient(135deg, #558b2f 0%, #0d1117 100%)"
     },
     "burgundy": {
         "accent": "#a91d3a",
         "user_bg": "#800020",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #251015 100%)",
         "sidebar_bg": "#1a1012",
-        "card_gradient": "linear-gradient(180deg, #800020 0%, #0d1117 100%)"
+        "card_bg": "linear-gradient(135deg, #800020 0%, #0d1117 100%)"
     },
     "sky_white": {
         "accent": "#00b4d8",
         "user_bg": "#0096c7",
         "bg_gradient": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
         "sidebar_bg": "#0b1329",
-        "card_gradient": "linear-gradient(180deg, #00b4d8 0%, #ffffff 100%)"
+        "card_bg": "linear-gradient(135deg, #00b4d8 0%, #0f172a 100%)"
     }
 }
 
-# حفظ خيار الثيم المختار في session_state (الافتراضي: فستقي وأسود)
-if "selected_theme_key" not in st.session_state:
-    st.session_state.selected_theme_key = "pistachio"
+# تهيئة الثيم الافتراضي
+if "selected_theme_key" not in str_lit.session_state:
+    str_lit.session_state.selected_theme_key = "pistachio"
 
-# إنشاء بطاقات الثيمات بالألوان بداخل الشريط الجانبي (Themes)
-st.sidebar.title("Themes 🎨")
-
-# عرض بطاقات الألوان في السايدبار على شكل 3 أعمدة
-cols = st.sidebar.columns(3)
+# إنشاء قائمة Themes في الشريط الجانبي على شكل أزرار دوائر/بطاقات ألوان ملونة بدون كلام
+str_lit.sidebar.title("Themes 🎨")
+cols = str_lit.sidebar.columns(3)
 theme_keys = list(THEMES.keys())
 
 for idx, t_key in enumerate(theme_keys):
     with cols[idx]:
-        card_style = f"""
-            background: {THEMES[t_key]['card_gradient']};
-            height: 90px;
-            border-radius: 12px;
-            cursor: pointer;
-            border: {'2px solid #ffffff' if st.session_state.selected_theme_key == t_key else '1px solid #333333'};
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-            margin-bottom: 8px;
+        is_selected = str_lit.session_state.selected_theme_key == t_key
+        border_style = "3px solid #ffffff" if is_selected else "1px solid #444444"
+        card_html = f"""
+            <div style="
+                background: {THEMES[t_key]['card_bg']};
+                height: 55px;
+                border-radius: 50%;
+                border: {border_style};
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                margin-bottom: 5px;
+                cursor: pointer;
+            "></div>
         """
-        st.markdown(f'<div style="{card_style}"></div>', unsafe_allow_html=True)
-        if st.button(" ", key=f"btn_theme_{t_key}", use_container_width=True):
-            st.session_state.selected_theme_key = t_key
-            st.rerun()
+        str_lit.markdown(card_html, unsafe_allow_html=True)
+        if str_lit.button(" ", key=f"btn_t_{t_key}", use_container_width=True):
+            str_lit.session_state.selected_theme_key = t_key
+            str_lit.rerun()
 
-active_theme = THEMES[st.session_state.selected_theme_key]
+active_theme = THEMES[str_lit.session_state.selected_theme_key]
 
-# 3. حقن الـ CSS لتطبيق ألوان الثيم وتثبيت زر المشبك (📎) بجانب صندوق الكتابة بدقة بالأسفل
-st.markdown(f"""
+# 3. حقن الـ CSS لتنسيق الواجهة ومحاذاة زر المشبك (📎) بدقة بجانب صندوق الكتابة بالأسفل
+str_lit.markdown(f"""
 <style>
     /* خلفية التطبيق الشاملة */
     .stApp {{
@@ -125,32 +127,38 @@ st.markdown(f"""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }}
 
-    /* الإبقاء على صندوق الكتابة بالأسفل بشكل طبيعي */
+    /* تثبيت صندوق الكتابة في أسفل الشاشة تماماً بدون أن يرتفع للمنتصف */
     div[data-testid="stChatInput"] {{
+        position: fixed !important;
         bottom: 15px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        max-width: 730px !important;
+        width: 90% !important;
+        z-index: 999;
     }}
 
-    /* زر رفع الملفات بداخل دائرة تحتفظ بأيقونة المشبك (📎) بجانب صندوق الكتابة بالأسفل */
+    /* وضع زر المشبك (📎) ملاصق تماماً لصندوق الكتابة من جهة اليسار وعلى نفس السطر بالأسفل */
     div[data-testid="stFileUploader"] {{
-        position: fixed;
-        bottom: 21px;
-        left: calc(50% - 355px);
-        z-index: 99999;
+        position: fixed !important;
+        bottom: 20px !important;
+        left: calc(50% - 395px) !important;
+        z-index: 99999 !important;
         width: 44px !important;
     }}
     
     @media (max-width: 768px) {{
         div[data-testid="stFileUploader"] {{
-            left: 12px;
+            left: 15px !important;
         }}
     }}
     
     div[data-testid="stFileUploader"] section {{
         padding: 0px !important;
         border-radius: 50% !important;
-        width: 42px !important;
-        height: 42px !important;
-        min-height: 42px !important;
+        width: 40px !important;
+        height: 40px !important;
+        min-height: 40px !important;
         background-color: #21262d !important;
         border: 1px solid {active_theme['accent']} !important;
         display: flex !important;
@@ -164,26 +172,27 @@ st.markdown(f"""
         display: none !important;
     }}
     
-    /* توسيط أيقونة المشبك (📎) بمنتصف الدائرة تماماً */
+    /* أيقونة المشبك الفعلية (📎) بمنتصف الدائرة تماماً */
     div[data-testid="stFileUploader"] section::after {{
         content: "📎";
-        font-size: 19px;
+        font-size: 18px;
         display: flex;
         align-items: center;
         justify-content: center;
         width: 100%;
         height: 100%;
+        margin-top: 1px;
     }}
 </style>
 """, unsafe_allow_html=True)
 
 # 4. إعداد مفتاح API والـ Client
-API_KEY = st.secrets.get("GEMINI_API_KEY")
+API_KEY = str_lit.secrets.get("GEMINI_API_KEY")
 if not API_KEY:
-    st.error("⚠️ يرجى إضافة GEMINI_API_KEY في Streamlit Secrets.")
-    st.stop()
+    str_lit.error("⚠️ يرجى إضافة GEMINI_API_KEY في Streamlit Secrets.")
+    str_lit.stop()
 
-@st.cache_resource
+@str_lit.cache_resource
 def get_gemini_client():
     return genai.Client(api_key=API_KEY)
 
@@ -219,16 +228,16 @@ def search_company_rag(query: str) -> str:
     return ""
 
 # تهيئة الذاكرة
-if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "مرحباً بك! ⚡ أنا **RADDAD**. كيف أستطيع مساعدتك اليوم؟"}]
+if "messages" not in str_lit.session_state:
+    str_lit.session_state.messages = [{"role": "assistant", "content": "مرحباً بك! ⚡ أنا **RADDAD**. كيف أستطيع مساعدتك اليوم؟"}]
 
 # عرض العنوان الرئيسي
-st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
+str_lit.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
 
 # 6. عرض المحادثات بتنسيق الـ HTML المخصص (يمين للمستخدم ويسار للبوت)
-for msg in st.session_state.messages:
+for msg in str_lit.session_state.messages:
     if msg["role"] == "user":
-        st.markdown(f"""
+        str_lit.markdown(f"""
             <div class="chat-row-user">
                 <div class="chat-bubble user-bubble">
                     {msg["content"]}
@@ -236,7 +245,7 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
     else:
-        st.markdown(f"""
+        str_lit.markdown(f"""
             <div class="chat-row-assistant">
                 <div class="chat-bubble assistant-bubble">
                     {msg["content"]}
@@ -244,9 +253,9 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 7. واجهة الإدخال ورفع الملفات بالمشبك (📎) مجاور لصندوق الكتابة بالأسفل
-uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
-user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
+# 7. واجهة الإدخال ورفع الملفات بمشبك (📎) مجاور لصندوق الكتابة تماماً بالأسفل
+uploaded_file = str_lit.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
+user_input = str_lit.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
 # معالجة الإدخال
 final_query = ""
@@ -260,12 +269,12 @@ elif user_input:
     final_query = user_input
 
 if final_query:
-    st.session_state.messages.append({"role": "user", "content": final_query})
-    st.rerun()
+    str_lit.session_state.messages.append({"role": "user", "content": final_query})
+    str_lit.rerun()
 
 # 8. توليد الرد من Gemini (مع الحفاظ على الموديل gemini-3.6-flash)
-if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
-    last_user_query = st.session_state.messages[-1]["content"]
+if str_lit.session_state.messages and str_lit.session_state.messages[-1]["role"] == "user":
+    last_user_query = str_lit.session_state.messages[-1]["content"]
     
     extra_context = ""
     for code in ["ORD-101", "ORD-202", "ORD-303"]:
@@ -297,7 +306,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
             if chunk.text:
                 full_res += chunk.text
 
-        st.session_state.messages.append({"role": "assistant", "content": full_res})
-        st.rerun()
+        str_lit.session_state.messages.append({"role": "assistant", "content": full_res})
+        str_lit.rerun()
     except Exception as e:
-        st.error(f"حدث خطأ: {e}")
+        str_lit.error(f"حدث خطأ: {e}")
