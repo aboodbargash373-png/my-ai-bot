@@ -1,6 +1,6 @@
 # 🤖 Smart Enterprise Customer Service AI Chatbot
 
-An intelligent, context-aware AI chatbot engine designed for businesses and enterprise customer support. Built using *Streamlit, **Google Gemini 2.5 Flash, and **PyPDF*, this application ingests dynamic company knowledge bases (PDFs/Documents) to deliver accurate, fast, and highly reliable customer responses in real time.
+An intelligent, context-aware AI chatbot engine designed for businesses and enterprise customer support. Built using *Streamlit, **Google Gemini 3.6 Flash, and **PyPDF*, this application ingests dynamic company knowledge bases (PDFs/Documents) to deliver accurate, fast, and highly reliable customer responses in real time.
 
 ---
 
