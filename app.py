@@ -4,37 +4,61 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات (تعرض بالألوان الدائرية الفخمة)
+# 2. تعريف درجات الألوان وتصميم بطاقات الثيمات (Themes)
 THEMES = {
-    "🟢 ⬛ فستقي وأسود (الافتراضي)": {
+    "pistachio": {
         "accent": "#558b2f",
         "user_bg": "#558b2f",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #162214 100%)",
         "sidebar_bg": "#121a11",
-        "preview": "🟢 ⬛"
+        "card_gradient": "linear-gradient(180deg, #558b2f 0%, #0d1117 100%)"
     },
-    "🔴 ⬛ برغندي وأسود": {
+    "burgundy": {
         "accent": "#a91d3a",
         "user_bg": "#800020",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #251015 100%)",
         "sidebar_bg": "#1a1012",
-        "preview": "🔴 ⬛"
+        "card_gradient": "linear-gradient(180deg, #800020 0%, #0d1117 100%)"
     },
-    "🔵 ⚪ أزرق سماوي وأبيض": {
+    "sky_white": {
         "accent": "#00b4d8",
         "user_bg": "#0096c7",
         "bg_gradient": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
         "sidebar_bg": "#0b1329",
-        "preview": "🔵 ⚪"
+        "card_gradient": "linear-gradient(180deg, #00b4d8 0%, #ffffff 100%)"
     }
 }
 
-# اختيار الثيم من الـ Sidebar بشكل أنيق
-st.sidebar.title("إعدادات الثيم 🎨")
-selected_theme_name = st.sidebar.selectbox("اختر الثيم المفضّل:", list(THEMES.keys()), index=0, label_visibility="collapsed")
-active_theme = THEMES[selected_theme_name]
+# حفظ خيار الثيم المختار في session_state (الافتراضي: فستقي وأسود)
+if "selected_theme_key" not in st.session_state:
+    st.session_state.selected_theme_key = "pistachio"
 
-# 3. حقن الـ CSS لتنسيق الواجهة بالكامل وتثبيت زر المشبك (📎) بجانب صندوق الكتابة بدقة
+# إنشاء بطاقات الثيمات بالألوان بداخل الشريط الجانبي (Themes)
+st.sidebar.title("Themes 🎨")
+
+# عرض بطاقات الألوان في السايدبار على شكل 3 أعمدة
+cols = st.sidebar.columns(3)
+theme_keys = list(THEMES.keys())
+
+for idx, t_key in enumerate(theme_keys):
+    with cols[idx]:
+        card_style = f"""
+            background: {THEMES[t_key]['card_gradient']};
+            height: 90px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: {'2px solid #ffffff' if st.session_state.selected_theme_key == t_key else '1px solid #333333'};
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            margin-bottom: 8px;
+        """
+        st.markdown(f'<div style="{card_style}"></div>', unsafe_allow_html=True)
+        if st.button(" ", key=f"btn_theme_{t_key}", use_container_width=True):
+            st.session_state.selected_theme_key = t_key
+            st.rerun()
+
+active_theme = THEMES[st.session_state.selected_theme_key]
+
+# 3. حقن الـ CSS لتطبيق ألوان الثيم وتثبيت زر المشبك (📎) بجانب صندوق الكتابة بدقة بالأسفل
 st.markdown(f"""
 <style>
     /* خلفية التطبيق الشاملة */
@@ -101,22 +125,23 @@ st.markdown(f"""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }}
 
-    /* تنسيق زر رفع الملفات (المشبك 📎) ليصبح بجانب خانة الكتابة تماماً وبشكل دائري متناسق */
+    /* الإبقاء على صندوق الكتابة بالأسفل بشكل طبيعي */
     div[data-testid="stChatInput"] {{
         bottom: 15px !important;
     }}
 
+    /* زر رفع الملفات بداخل دائرة تحتفظ بأيقونة المشبك (📎) بجانب صندوق الكتابة بالأسفل */
     div[data-testid="stFileUploader"] {{
         position: fixed;
         bottom: 21px;
-        left: calc(50% - 310px); /* محاذاة زر المشبك بجانب صندوق الكتابة بدقة */
+        left: calc(50% - 355px);
         z-index: 99999;
         width: 44px !important;
     }}
     
     @media (max-width: 768px) {{
         div[data-testid="stFileUploader"] {{
-            left: 15px;
+            left: 12px;
         }}
     }}
     
@@ -132,17 +157,17 @@ st.markdown(f"""
         align-items: center !important;
         justify-content: center !important;
         cursor: pointer;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }}
     
     div[data-testid="stFileUploader"] section span {{
         display: none !important;
     }}
     
-    /* أيقونة المشبك (📎) بمنتصف الدائرة تماماً */
+    /* توسيط أيقونة المشبك (📎) بمنتصف الدائرة تماماً */
     div[data-testid="stFileUploader"] section::after {{
         content: "📎";
-        font-size: 18px;
+        font-size: 19px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -219,7 +244,7 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 7. واجهة الإدخال ورفع الملفات بالمشبك (📎) بجانب صندوق الكتابة
+# 7. واجهة الإدخال ورفع الملفات بالمشبك (📎) مجاور لصندوق الكتابة بالأسفل
 uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
 user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
