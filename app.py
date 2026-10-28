@@ -12,11 +12,11 @@ themes = {
 }
 
 # شريط جانبي لاختيار الثيم
-st.sidebar.title("إعدادات الثيم 🎨")
+st.sidebar.title("إعدادات التطبيق 🎨")
 selected_theme_name = st.sidebar.selectbox("اختر الثيم:", list(themes.keys()), index=0)
 current_theme = themes[selected_theme_name]
 
-# 3. تصميم CSS المحدث (دعم الثيمات المختار + زر رفع الملفات بجانب حقل الإدخال)
+# 3. تصميم CSS مرتب لفقاعات الشات واتجاهاتها وتثبيت الألوان
 st.markdown(f"""
 <style>
     .stApp {{ background-color: #0d1117; color: #c9d1d9; }}
@@ -63,6 +63,12 @@ st.markdown(f"""
         color: white;
         border-bottom-left-radius: 2px;
     }}
+    
+    /* تنسيق زر رفع الملفات ليصبح متناسقاً */
+    [data-testid="stFileUploader"] {
+        width: 100%;
+        margin-top: 5px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -80,7 +86,7 @@ client = get_gemini_client()
 
 SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِي لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية.,جاوب بلغت المستخدم الي سالك فيها"
 
-# 5. الأدوات والدوال الخاصة
+# 5. الدوال الخاصة (RAG والطلبات والمطور)
 def check_order_status(order_id: str) -> str:
     db = {
         "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
@@ -132,16 +138,18 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 6. إضافة زر رفع الملفات والصور (بعلامة الزائد + بجانب خانة الإدخال)
-col1, col2 = st.columns([0.08, 0.92])
-with col1:
-    # زر علامة الزائد لرفع الملفات بجميع أنواعها
-    uploaded_file = st.file_uploader("➕", type=None, label_visibility="collapsed", key="file_upload")
+# 6. قسم الإدخال وزر رفع الملفات (تصميم مرتب ومضبوط بجانب بعضه)
+with st.container():
+    col_input, col_btn = st.columns([0.85, 0.15])
+    
+    with col_input:
+        user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...", key="chat_input_field")
+        
+    with col_btn:
+        # زر رفع الملفات (اختيار ملفات بجميع أنواعها)
+        uploaded_file = st.file_uploader("📁", type=None, label_visibility="collapsed", key="file_upload_btn")
 
-with col2:
-    user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
-
-# معالجة الإدخال والملفات المرفوعة
+# معالجة إرسال الرسالة أو الملف
 final_query = ""
 if uploaded_file is not None:
     file_info = f"[تم إرفاق ملف: {uploaded_file.name}]"
@@ -156,7 +164,7 @@ if final_query:
     st.session_state.messages.append({"role": "user", "content": final_query})
     st.rerun()
 
-# منطق توليد الرد عبر نموذج Gemini
+# منطق توليد الرد عبر نموذج Gemini (مع الحفاظ على الموديل المطلوب gemini-3.6-flash)
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     last_user_query = st.session_state.messages[-1]["content"]
     
