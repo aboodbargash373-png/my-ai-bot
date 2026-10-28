@@ -4,7 +4,7 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. تعريف درجات الألوان وتدرجات بطاقات الثيمات الثلاثة
+# 2. درجات ألوان الثيمات
 THEMES = {
     "pistachio": {
         "name": "فستقي",
@@ -32,16 +32,14 @@ THEMES = {
     }
 }
 
-# تهيئة الثيم الافتراضي (فستقي)
+# تهيئة الثيم الافتراضي
 if "selected_theme_key" not in st.session_state:
     st.session_state.selected_theme_key = "pistachio"
 
 active_theme = THEMES[st.session_state.selected_theme_key]
 
-# 3. تصميم الـ Sidebar باسم Themes وبطاقات ألوان أنيقة وعصرية (مثل الصورة الثانية تماماً)
+# 3. عرض بطاقات Themes في الشريط الجانبي مع إخفاء أزرار الـ Streamlit وتغطية البطاقة بالكامل لتكون هي الكبسة
 st.sidebar.title("Themes 🎨")
-
-# عرض بطاقات الثيمات جنب بعض بـ 3 أعمدة
 cols = st.sidebar.columns(3)
 theme_keys = list(THEMES.keys())
 
@@ -50,45 +48,39 @@ for idx, t_key in enumerate(theme_keys):
         is_selected = st.session_state.selected_theme_key == t_key
         border_style = "2px solid #ffffff" if is_selected else "1px solid rgba(255,255,255,0.15)"
         
-        # إنشاء بطاقة ملونة ككبسة تفاعلية
+        # رسم البطاقة الملونة
         card_html = f"""
             <div style="
                 background: {THEMES[t_key]['card_gradient']};
-                height: 100px;
-                border-radius: 14px;
+                height: 90px;
+                border-radius: 12px;
                 border: {border_style};
-                box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+                box-shadow: 0 4px 10px rgba(0,0,0,0.4);
                 cursor: pointer;
-                transition: transform 0.2s;
             "></div>
         """
         st.markdown(card_html, unsafe_allow_html=True)
-        # زر شفاف يغطي البطاقة بالكامل لضمان التفاعل عند الكبس على الصورة مباشرة
-        if st.button(THEMES[t_key]["name"], key=f"theme_card_{t_key}", use_container_width=True):
+        # زر مخفي بالكامل يغطي مساحة البطاقة تماماً لتستجيب للنقر مباشرة بدون ظهور أي نص أو مربعات بالأسفل
+        if st.button("", key=f"overlay_btn_{t_key}", use_container_width=True):
             st.session_state.selected_theme_key = t_key
             st.rerun()
 
-# 4. حقن الـ CSS الشامل لتطبيق الألوان وتصفية الواجهة وإلغاء أي زوائد
+# 4. حقن الـ CSS لإخفاء أي بقايا للأزرار تحت البطاقات وتنسيق الواجهة بالكامل
 st.markdown(f"""
 <style>
-    /* جعل أزرار الثيمات شفافة وتغطي البطاقات تماماً */
+    /* جعل زر الستريمليت المخفي يغطي البطاقة بالكامل وبدون أي إطار أو نص مرئي */
     div[data-testid="stSidebar"] div[data-testid="stButton"] button {{
         background-color: transparent !important;
         border: none !important;
-        color: #e5e7eb !important;
-        font-size: 11px !important;
-        font-weight: 600 !important;
-        margin-top: -100px !important;
-        height: 100px !important;
+        color: transparent !important;
+        margin-top: -95px !important;
+        height: 90px !important;
         width: 100% !important;
-        display: flex !important;
-        align-items: flex-end !important;
-        justify-content: center !important;
-        padding-bottom: 6px !important;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        cursor: pointer !important;
     }}
     div[data-testid="stSidebar"] div[data-testid="stButton"] button:hover {{
         background-color: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 12px !important;
     }}
 
     /* خلفية التطبيق الشاملة بتدرج فخم */
@@ -166,7 +158,7 @@ st.markdown(f"""
         z-index: 999;
     }}
 
-    /* وضع زر رفع الملفات (+) بجانب صندوق الكتابة بالأسفل مباشرة بمنتصف الدائرة */
+    /* وضع زر رفع الملفات (+) بجانب صندوق الكتابة بالأسفل مباشرة في منتصف الدائرة */
     div[data-testid="stFileUploader"] {{
         position: fixed !important;
         bottom: 20px !important;
