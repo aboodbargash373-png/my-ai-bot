@@ -7,7 +7,6 @@ st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="center
 # 2. درجات ألوان الثيمات
 THEMES = {
     "pistachio": {
-        "name": "فستقي",
         "accent": "#558b2f",
         "user_bg": "#558b2f",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #162214 100%)",
@@ -15,7 +14,6 @@ THEMES = {
         "card_gradient": "linear-gradient(180deg, #558b2f 0%, #111827 100%)"
     },
     "burgundy": {
-        "name": "برغندي",
         "accent": "#a91d3a",
         "user_bg": "#800020",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #251015 100%)",
@@ -23,7 +21,6 @@ THEMES = {
         "card_gradient": "linear-gradient(180deg, #a91d3a 0%, #111827 100%)"
     },
     "sky_white": {
-        "name": "سماوي وأبيض",
         "accent": "#38bdf8",
         "user_bg": "#0284c7",
         "bg_gradient": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
@@ -38,7 +35,7 @@ if "selected_theme_key" not in st.session_state:
 
 active_theme = THEMES[st.session_state.selected_theme_key]
 
-# 3. عرض بطاقات Themes في الشريط الجانبي مع إخفاء أزرار الـ Streamlit وتغطية البطاقة بالكامل لتكون هي الكبسة
+# 3. عرض الأزرار بحيث يكون الزر نفسه هو بطاقة اللون تماماً
 st.sidebar.title("Themes 🎨")
 cols = st.sidebar.columns(3)
 theme_keys = list(THEMES.keys())
@@ -46,41 +43,42 @@ theme_keys = list(THEMES.keys())
 for idx, t_key in enumerate(theme_keys):
     with cols[idx]:
         is_selected = st.session_state.selected_theme_key == t_key
-        border_style = "2px solid #ffffff" if is_selected else "1px solid rgba(255,255,255,0.15)"
-        
-        # رسم البطاقة الملونة
-        card_html = f"""
-            <div style="
-                background: {THEMES[t_key]['card_gradient']};
-                height: 90px;
-                border-radius: 12px;
-                border: {border_style};
-                box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-                cursor: pointer;
-            "></div>
-        """
-        st.markdown(card_html, unsafe_allow_html=True)
-        # زر مخفي بالكامل يغطي مساحة البطاقة تماماً لتستجيب للنقر مباشرة بدون ظهور أي نص أو مربعات بالأسفل
-        if st.button("", key=f"overlay_btn_{t_key}", use_container_width=True):
+        # نعطي مفتاح فرعي لكل زر لتفعيل الثيم عند الضغط عليه
+        if st.button("", key=f"theme_btn_{t_key}", use_container_width=True):
             st.session_state.selected_theme_key = t_key
             st.rerun()
 
-# 4. حقن الـ CSS لإخفاء أي بقايا للأزرار تحت البطاقات وتنسيق الواجهة بالكامل
+# 4. حقن الـ CSS لتحويل أزرار Streamlit العادية إلى بطاقات ألوان ملونة وفخمة بالكامل
 st.markdown(f"""
 <style>
-    /* جعل زر الستريمليت المخفي يغطي البطاقة بالكامل وبدون أي إطار أو نص مرئي */
+    /* تحويل أزرار الـ Sidebar لتصبح هي نفس بطاقات الألوان تماماً وبدون أي نصوص */
     div[data-testid="stSidebar"] div[data-testid="stButton"] button {{
-        background-color: transparent !important;
+        background: transparent !important;
         border: none !important;
-        color: transparent !important;
-        margin-top: -95px !important;
         height: 90px !important;
         width: 100% !important;
-        cursor: pointer !important;
-    }}
-    div[data-testid="stSidebar"] div[data-testid="stButton"] button:hover {{
-        background-color: rgba(255, 255, 255, 0.05) !important;
         border-radius: 12px !important;
+        cursor: pointer !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        transition: transform 0.1s ease;
+    }}
+    
+    /* تلوين كل زر حسب الثيم التابع له */
+    div[data-testid="stSidebar"] div.st-key-theme_btn_pistachio button {{
+        background: {THEMES['pistachio']['card_gradient']} !important;
+        border: {"2px solid #ffffff" if st.session_state.selected_theme_key == "pistachio" else "1px solid rgba(255,255,255,0.15)"} !important;
+    }}
+    div[data-testid="stSidebar"] div.st-key-theme_btn_burgundy button {{
+        background: {THEMES['burgundy']['card_gradient']} !important;
+        border: {"2px solid #ffffff" if st.session_state.selected_theme_key == "burgundy" else "1px solid rgba(255,255,255,0.15)"} !important;
+    }}
+    div[data-testid="stSidebar"] div.st-key-theme_btn_sky_white button {{
+        background: {THEMES['sky_white']['card_gradient']} !important;
+        border: {"2px solid #ffffff" if st.session_state.selected_theme_key == "sky_white" else "1px solid rgba(255,255,255,0.15)"} !important;
+    }}
+
+    div[data-testid="stSidebar"] div[data-testid="stButton"] button:hover {{
+        transform: scale(1.03);
     }}
 
     /* خلفية التطبيق الشاملة بتدرج فخم */
@@ -227,7 +225,7 @@ def check_order_status(order_id: str) -> str:
     db = {
         "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
         "ORD-202": "تم تجهيز الطلب وهو في انتظار شركة الشحن 📦",
-        "ORD-303": "تم تسليم الطلب بنجاح ✅"
+        "ORD-303": "تم تسليم الطلب نجاح ✅"
     }
     clean_id = order_id.strip().upper()
     return db.get(clean_id, f"رقم الطلب {clean_id} غير موجود في النظام.")
