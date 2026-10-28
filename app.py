@@ -4,7 +4,7 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات (الثيم السماوي معدل بدقة: أزرق سماوي فوق إلى أبيض نقي تحت)
+# 2. درجات ألوان الثيمات (الثيم السماوي صار بألوان سماوية زاهية وفاتحة للتطبيق بالكامل)
 THEMES = {
     "pistachio": {
         "accent": "#558b2f",
@@ -23,9 +23,9 @@ THEMES = {
     "sky_white": {
         "accent": "#00b4d8",
         "user_bg": "#0096c7",
-        "bg_gradient": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-        "sidebar_bg": "#0b1329",
-        "card_bg": "linear-gradient(180deg, #38bdf8 0%, #ffffff 100%)"
+        "bg_gradient": "linear-gradient(135deg, #023e8a 0%, #0077b6 50%, #00b4d8 100%)",
+        "sidebar_bg": "#03045e",
+        "card_bg": "linear-gradient(180deg, #00b4d8 0%, #ffffff 100%)"
     }
 }
 
@@ -33,7 +33,7 @@ THEMES = {
 if "selected_theme_key" not in st.session_state:
     st.session_state.selected_theme_key = "pistachio"
 
-# التبديل الفوري والنظيف عبر query_params لتجنب أي أزرار رمادية فوق البطاقات
+# التبديل الفوري عبر query_params
 query_params = st.query_params
 if "theme" in query_params:
     t_val = query_params["theme"]
@@ -42,7 +42,7 @@ if "theme" in query_params:
 
 active_theme = THEMES[st.session_state.selected_theme_key]
 
-# 3. عرض بطاقات الألوان في الـ Sidebar (بدون أي أزرار رمادية، البطاقة نفسها هي الرابط التفاعلي النظيف)
+# 3. عرض بطاقات الثيمات في الشريط الجانبي
 st.sidebar.title("Themes 🎨")
 
 cols = st.sidebar.columns(3)
@@ -54,7 +54,6 @@ for idx, t_key in enumerate(theme_keys):
         border_style = "3px solid #ffffff" if is_selected else "1px solid rgba(255,255,255,0.2)"
         box_shadow = "0 0 15px rgba(255,255,255,0.5)" if is_selected else "0 4px 10px rgba(0,0,0,0.4)"
         
-        # بطاقة ملونة بالكامل ومصمتة ونظيفة 100% بدون أي مربعات بداخلها
         card_code = f"""
             <a href="?theme={t_key}" target="_self" style="text-decoration: none;">
                 <div style="
@@ -70,13 +69,13 @@ for idx, t_key in enumerate(theme_keys):
         """
         st.markdown(card_code, unsafe_allow_html=True)
 
-# 4. حقن الـ CSS الشامل لتنسيق الواجهة والمحاذاة
+# 4. حقن الـ CSS الشامل لتطبيق الثيم السماوي على الواجهة بالكامل
 st.markdown(f"""
 <style>
     /* خلفية التطبيق الشاملة */
     .stApp {{
         background: {active_theme['bg_gradient']};
-        color: #c9d1d9;
+        color: #ffffff;
     }}
     
     /* الشريط الجانبي */
@@ -91,7 +90,7 @@ st.markdown(f"""
         text-align: center;
         color: {active_theme['accent']};
         margin-bottom: 25px;
-        text-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+        text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
     }}
 
     /* حاويات المحادثة - يمين للمستخدم، يسار للبوت */
@@ -148,7 +147,7 @@ st.markdown(f"""
         z-index: 999;
     }}
 
-    /* ضبط زر رفع الملفات (+) بدقة ليشung متناسقاً تماماً بجانب صندوق الكتابة وبشكل دائري احترافي */
+    /* زر رفع الملفات (+) بجانب صندوق الكتابة بالأسفل مباشرة في منتصف الدائرة */
     div[data-testid="stFileUploader"] {{
         position: fixed !important;
         bottom: 23px !important;
