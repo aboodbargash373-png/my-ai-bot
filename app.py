@@ -4,38 +4,45 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات
+# 2. درجات ألوان الثيمات (الثيم السماوي صار أزرق سماوي فاح وأبيض صافي)
 THEMES = {
     "pistachio": {
         "accent": "#558b2f",
         "user_bg": "#558b2f",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #162214 100%)",
         "sidebar_bg": "#121a11",
-        "card_bg": "linear-gradient(180deg, #558b2f 0%, #111827 100%)"
+        "card_bg": "linear-gradient(180deg, #558b2f 0%, #0d1117 100%)"
     },
     "burgundy": {
         "accent": "#a91d3a",
         "user_bg": "#800020",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #251015 100%)",
         "sidebar_bg": "#1a1012",
-        "card_bg": "linear-gradient(180deg, #800020 0%, #111827 100%)"
+        "card_bg": "linear-gradient(180deg, #800020 0%, #0d1117 100%)"
     },
     "sky_white": {
-        "accent": "#38bdf8",
-        "user_bg": "#0284c7",
+        "accent": "#00b4d8",
+        "user_bg": "#0096c7",
         "bg_gradient": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
         "sidebar_bg": "#0b1329",
-        "card_bg": "linear-gradient(180deg, #38bdf8 0%, #ffffff 100%)"
+        "card_bg": "linear-gradient(180deg, #00b4d8 0%, #ffffff 100%)"
     }
 }
 
-# تهيئة الثيم الافتراضي في session_state
+# تهيئة الثيم الافتراضي
 if "selected_theme_key" not in st.session_state:
     st.session_state.selected_theme_key = "pistachio"
 
+# التبديل الفوري عبر query_params لتجنب أي مشاكل
+query_params = st.query_params
+if "theme" in query_params:
+    t_val = query_params["theme"]
+    if t_val in THEMES:
+        st.session_state.selected_theme_key = t_val
+
 active_theme = THEMES[st.session_state.selected_theme_key]
 
-# 3. عرض بطاقات الألوان بداخل الـ Sidebar مع زِر شفاف لتنفيذ st.rerun() الداخلي السريع
+# 3. عرض بطاقات الألوان في الشريط الجانبي
 st.sidebar.title("Themes 🎨")
 
 cols = st.sidebar.columns(3)
@@ -46,41 +53,23 @@ for idx, t_key in enumerate(theme_keys):
         is_selected = st.session_state.selected_theme_key == t_key
         border_val = "3px solid #ffffff" if is_selected else "1px solid rgba(255,255,255,0.2)"
         
-        # رسم البطاقة الملونة بـ HTML
         card_code = f"""
-            <div style="
-                background: {THEMES[t_key]['card_bg']};
-                height: 85px;
-                border-radius: 14px;
-                border: {border_val};
-                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-                margin-bottom: -85px;
-                pointer-events: none;
-            "></div>
+            <a href="?theme={t_key}" target="_self" style="text-decoration: none;">
+                <div style="
+                    background: {THEMES[t_key]['card_bg']};
+                    height: 85px;
+                    border-radius: 14px;
+                    border: {border_val};
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                    cursor: pointer;
+                "></div>
+            </a>
         """
         st.markdown(card_code, unsafe_allow_html=True)
-        
-        # زر شفاف مطبق فوق بطاقة اللون تماماً لمنع إعادة تحميل الصفحة بالكامل
-        if st.button("", key=f"fast_theme_{t_key}", use_container_width=True):
-            st.session_state.selected_theme_key = t_key
-            st.rerun()
 
-# 4. حقن الـ CSS
+# 4. حقن الـ CSS وضبط محاذاة زر (+) ليكون متناسقاً تماماً بجانب صندوق الكتابة
 st.markdown(f"""
 <style>
-    /* جعل أزرار الستريمليت فوق البطاقات شفافة تماماً */
-    div[data-testid="stSidebar"] div[data-testid="stButton"] button {{
-        background-color: transparent !important;
-        border: none !important;
-        height: 85px !important;
-        width: 100% !important;
-        cursor: pointer !important;
-    }}
-    div[data-testid="stSidebar"] div[data-testid="stButton"] button:hover {{
-        background-color: rgba(255, 255, 255, 0.08) !important;
-        border-radius: 14px !important;
-    }}
-
     /* خلفية التطبيق الشاملة */
     .stApp {{
         background: {active_theme['bg_gradient']};
@@ -129,7 +118,7 @@ st.markdown(f"""
         word-wrap: break-word;
     }}
 
-    /* فقاعة المستخدم */
+    /* فقاعة المستخدم بلون الثيم المختار */
     .user-bubble {{
         background-color: {active_theme['user_bg']} !important;
         color: #ffffff !important;
@@ -145,7 +134,7 @@ st.markdown(f"""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }}
 
-    /* تثبيت صندوق الكتابة بالأسفل */
+    /* تثبيت صندوق الكتابة بالأسفل تماماً */
     div[data-testid="stChatInput"] {{
         position: fixed !important;
         bottom: 15px !important;
@@ -156,13 +145,13 @@ st.markdown(f"""
         z-index: 999;
     }}
 
-    /* زر رفع الملفات (+) بجانب صندوق الكتابة بالأسفل مباشرة في منتصف الدائرة */
+    /* ضبط زر رفع الملفات (+) بدقة ليشung متناسقاً تماماً بجانب صندوق الكتابة وبشكل دائري احترافي */
     div[data-testid="stFileUploader"] {{
         position: fixed !important;
-        bottom: 20px !important;
+        bottom: 23px !important;
         left: calc(50% - 395px) !important;
         z-index: 99999 !important;
-        width: 44px !important;
+        width: 40px !important;
     }}
     
     @media (max-width: 768px) {{
@@ -174,16 +163,16 @@ st.markdown(f"""
     div[data-testid="stFileUploader"] section {{
         padding: 0px !important;
         border-radius: 50% !important;
-        width: 40px !important;
-        height: 40px !important;
-        min-height: 40px !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-height: 38px !important;
         background-color: #21262d !important;
         border: 1px solid {active_theme['accent']} !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         cursor: pointer;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
     }}
     
     div[data-testid="stFileUploader"] section span {{
@@ -193,7 +182,7 @@ st.markdown(f"""
     /* علامة الزائد (+) متمركزة تماماً في منتصف الدائرة */
     div[data-testid="stFileUploader"] section::after {{
         content: "+";
-        font-size: 24px;
+        font-size: 20px;
         font-weight: bold;
         color: #ffffff;
         display: flex;
@@ -201,7 +190,7 @@ st.markdown(f"""
         justify-content: center;
         width: 100%;
         height: 100%;
-        margin-top: -2px;
+        margin-top: -1px;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -240,7 +229,7 @@ def search_company_rag(query: str) -> str:
     knowledge_base = [
         "سياسة الإرجاع: يمكن إرجاع أي منتج خلال 14 يوم من تاريخ الشراء بشرط أن يكون بحالته الأصلية.",
         "أوقات العمل: دعم عملاء رداد يعمل على مدار الساعة 24/7 طوال أيام الأسبوع.",
-        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلام."
+        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلاستلام."
     ]
     for doc in knowledge_base:
         if any(w in query.lower() for w in doc.lower().split() if len(w) > 3):
@@ -273,7 +262,7 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 8. واجهة الإدخال ورفع الملفات (+) المجاورة لصندوق الكتابة بالأسفل
+# 8. واجهة الإدخال ورفع الملفات (+) المجاورة لصندوق الكتابة بالأسفل بدقة
 uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
 user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
