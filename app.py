@@ -4,28 +4,28 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات
+# 2. درجات ألوان الثيمات وبطاقاتها
 THEMES = {
     "pistachio": {
         "accent": "#558b2f",
         "user_bg": "#558b2f",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #162214 100%)",
         "sidebar_bg": "#121a11",
-        "card_gradient": "linear-gradient(180deg, #558b2f 0%, #111827 100%)"
+        "card_bg": "linear-gradient(180deg, #558b2f 0%, #111827 100%)"
     },
     "burgundy": {
         "accent": "#a91d3a",
         "user_bg": "#800020",
         "bg_gradient": "linear-gradient(135deg, #0d1117 0%, #251015 100%)",
         "sidebar_bg": "#1a1012",
-        "card_gradient": "linear-gradient(180deg, #a91d3a 0%, #111827 100%)"
+        "card_bg": "linear-gradient(180deg, #800020 0%, #111827 100%)"
     },
     "sky_white": {
         "accent": "#38bdf8",
         "user_bg": "#0284c7",
         "bg_gradient": "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
         "sidebar_bg": "#0b1329",
-        "card_gradient": "linear-gradient(180deg, #38bdf8 0%, #ffffff 100%)"
+        "card_bg": "linear-gradient(180deg, #38bdf8 0%, #ffffff 100%)"
     }
 }
 
@@ -33,55 +33,46 @@ THEMES = {
 if "selected_theme_key" not in st.session_state:
     st.session_state.selected_theme_key = "pistachio"
 
+# التقاط التغيير عبر الـ Query Params لضمان الاستجابة الفورية عند الضغط على البطاقة الملونة
+query_params = st.query_params
+if "theme" in query_params:
+    t_val = query_params["theme"]
+    if t_val in THEMES:
+        st.session_state.selected_theme_key = t_val
+
 active_theme = THEMES[st.session_state.selected_theme_key]
 
-# 3. عرض الأزرار بحيث يكون الزر نفسه هو بطاقة اللون تماماً
+# 3. عرض بطاقات الألوان في الـ Sidebar كروابط/أزرار ملونة حقيقية 100%
 st.sidebar.title("Themes 🎨")
+
 cols = st.sidebar.columns(3)
 theme_keys = list(THEMES.keys())
 
 for idx, t_key in enumerate(theme_keys):
     with cols[idx]:
         is_selected = st.session_state.selected_theme_key == t_key
-        # نعطي مفتاح فرعي لكل زر لتفعيل الثيم عند الضغط عليه
-        if st.button("", key=f"theme_btn_{t_key}", use_container_width=True):
-            st.session_state.selected_theme_key = t_key
-            st.rerun()
+        border_val = "3px solid #ffffff" if is_selected else "1px solid rgba(255,255,255,0.2)"
+        
+        # استخدام رابط HTML بتصميم بطاقة ملونة يغير الثيم فوراً عند النقر عليه
+        card_code = f"""
+            <a href="?theme={t_key}" target="_self" style="text-decoration: none;">
+                <div style="
+                    background: {THEMES[t_key]['card_bg']};
+                    height: 85px;
+                    border-radius: 14px;
+                    border: {border_val};
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                    cursor: pointer;
+                    transition: transform 0.1s ease;
+                "></div>
+            </a>
+        """
+        st.markdown(card_code, unsafe_allow_html=True)
 
-# 4. حقن الـ CSS لتحويل أزرار Streamlit العادية إلى بطاقات ألوان ملونة وفخمة بالكامل
+# 4. حقن الـ CSS لتطبيق ألوان الثيم الشاملة وتثبيت عناصر المحادثة وزر (+)
 st.markdown(f"""
 <style>
-    /* تحويل أزرار الـ Sidebar لتصبح هي نفس بطاقات الألوان تماماً وبدون أي نصوص */
-    div[data-testid="stSidebar"] div[data-testid="stButton"] button {{
-        background: transparent !important;
-        border: none !important;
-        height: 90px !important;
-        width: 100% !important;
-        border-radius: 12px !important;
-        cursor: pointer !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-        transition: transform 0.1s ease;
-    }}
-    
-    /* تلوين كل زر حسب الثيم التابع له */
-    div[data-testid="stSidebar"] div.st-key-theme_btn_pistachio button {{
-        background: {THEMES['pistachio']['card_gradient']} !important;
-        border: {"2px solid #ffffff" if st.session_state.selected_theme_key == "pistachio" else "1px solid rgba(255,255,255,0.15)"} !important;
-    }}
-    div[data-testid="stSidebar"] div.st-key-theme_btn_burgundy button {{
-        background: {THEMES['burgundy']['card_gradient']} !important;
-        border: {"2px solid #ffffff" if st.session_state.selected_theme_key == "burgundy" else "1px solid rgba(255,255,255,0.15)"} !important;
-    }}
-    div[data-testid="stSidebar"] div.st-key-theme_btn_sky_white button {{
-        background: {THEMES['sky_white']['card_gradient']} !important;
-        border: {"2px solid #ffffff" if st.session_state.selected_theme_key == "sky_white" else "1px solid rgba(255,255,255,0.15)"} !important;
-    }}
-
-    div[data-testid="stSidebar"] div[data-testid="stButton"] button:hover {{
-        transform: scale(1.03);
-    }}
-
-    /* خلفية التطبيق الشاملة بتدرج فخم */
+    /* خلفية التطبيق الشاملة */
     .stApp {{
         background: {active_theme['bg_gradient']};
         color: #c9d1d9;
@@ -145,7 +136,7 @@ st.markdown(f"""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }}
 
-    /* تثبيت صندوق الكتابة بالأسفل بشكل احترافي */
+    /* تثبيت صندوق الكتابة في أسفل الشاشة تماماً */
     div[data-testid="stChatInput"] {{
         position: fixed !important;
         bottom: 15px !important;
@@ -156,7 +147,7 @@ st.markdown(f"""
         z-index: 999;
     }}
 
-    /* وضع زر رفع الملفات (+) بجانب صندوق الكتابة بالأسفل مباشرة في منتصف الدائرة */
+    /* زر رفع الملفات (+) بجانب صندوق الكتابة بالأسفل مباشرة في منتصف الدائرة */
     div[data-testid="stFileUploader"] {{
         position: fixed !important;
         bottom: 20px !important;
@@ -225,7 +216,7 @@ def check_order_status(order_id: str) -> str:
     db = {
         "ORD-101": "طلبك قيد الشحن حالياً وسيصل خلال 48 ساعة 🚚",
         "ORD-202": "تم تجهيز الطلب وهو في انتظار شركة الشحن 📦",
-        "ORD-303": "تم تسليم الطلب نجاح ✅"
+        "ORD-303": "تم تسليم الطلب بنجاح ✅"
     }
     clean_id = order_id.strip().upper()
     return db.get(clean_id, f"رقم الطلب {clean_id} غير موجود في النظام.")
