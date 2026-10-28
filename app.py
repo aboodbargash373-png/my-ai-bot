@@ -65,10 +65,10 @@ st.markdown(f"""
     }}
     
     /* تنسيق زر رفع الملفات ليصبح متناسقاً */
-    [data-testid="stFileUploader"] {
+    [data-testid="stFileUploader"] {{
         width: 100%;
         margin-top: 5px;
-    }
+    }}
 </style>
 """, unsafe_allow_html=True)
 
