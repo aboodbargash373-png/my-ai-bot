@@ -69,7 +69,7 @@ for idx, t_key in enumerate(theme_keys):
         """
         st.markdown(card_code, unsafe_allow_html=True)
 
-# 4. حقن الـ CSS الشامل لتطبيق الثيم على الواجهة بالكامل
+# 4. حقن الـ CSS الشامل وتعديل مساحة النص لكي لا يختفي تحت زر (+)
 st.markdown(f"""
 <style>
     .stApp {{
@@ -139,6 +139,11 @@ st.markdown(f"""
         z-index: 999;
     }}
 
+    /* إعطاء مساحة داخل صندوق الكتابة من جهة اليسار لكي لا يختفي النص تحت زر الزائد */
+    div[data-testid="stChatInput"] input {{
+        padding-left: 55px !important;
+    }}
+
     div[data-testid="stFileUploader"] {{
         position: fixed !important;
         bottom: 23px !important;
@@ -150,6 +155,10 @@ st.markdown(f"""
     @media (max-width: 768px) {{
         div[data-testid="stFileUploader"] {{
             left: 15px !important;
+        }}
+        /* تعديل إضافي للموبايل لضمان عدم تداخل النص مع الزر */
+        div[data-testid="stChatInput"] input {{
+            padding-left: 50px !important;
         }}
     }}
     
@@ -228,9 +237,11 @@ def search_company_rag(query: str) -> str:
             return doc
     return ""
 
-# تهيئة الذاكرة
+# تهيئة الذاكرة وحفظ الصورة الحالية فقط للرسالة الحالية
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "مرحباً بك! ⚡ أنا **RADDAD**. كيف أستطيع مساعدتك اليوم؟"}]
+if "active_image" not in st.session_state:
+    st.session_state.active_image = None
 
 # عرض العنوان الرئيسي
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
@@ -260,15 +271,10 @@ user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (م
 
 if "processed_input" not in st.session_state:
     st.session_state.processed_input = None
-if "current_file_bytes" not in st.session_state:
-    st.session_state.current_file_bytes = None
-if "current_file_mime" not in st.session_state:
-    st.session_state.current_file_mime = None
 
 current_input_signature = f"{user_input}_{uploaded_file.name if uploaded_file else 'nofile'}"
 
 if (user_input or uploaded_file) and st.session_state.processed_input != current_input_signature:
-    # إذا كتب المستخدم نصاً يظهر نصه، وإذا رفع صورة لوحدها تظهر رسالة نظيفة تدل على إرفاق صورة بدون كلام مصطنع
     if user_input:
         final_query = user_input
     elif uploaded_file:
@@ -276,12 +282,14 @@ if (user_input or uploaded_file) and st.session_state.processed_input != current
     else:
         final_query = ""
     
+    # تخزين بايتات الصورة الحالية بشكل مؤقت لهذه الرسالة فقط
     if uploaded_file is not None:
-        st.session_state.current_file_bytes = uploaded_file.getvalue()
-        st.session_state.current_file_mime = uploaded_file.type
+        st.session_state.active_image = {
+            "bytes": uploaded_file.getvalue(),
+            "mime": uploaded_file.type
+        }
     else:
-        st.session_state.current_file_bytes = None
-        st.session_state.current_file_mime = None
+        st.session_state.active_image = None
 
     if final_query:
         st.session_state.messages.append({"role": "user", "content": final_query})
@@ -292,7 +300,7 @@ if (user_input or uploaded_file) and st.session_state.processed_input != current
 if not user_input and not uploaded_file:
     st.session_state.processed_input = None
 
-# 9. توليد الرد من Gemini (موديل gemini-3.6-flash مع التنسيق الصحيح للـ SDK الجديد)
+# 9. توليد الرد من Gemini (مع إرسال الصورة مرة واحدة فقط عند رفعها، وعدم تكرارها في الأسئلة اللاحقة)
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     last_user_query = st.session_state.messages[-1]["content"]
     
@@ -315,17 +323,19 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     prompt_final = last_user_query + extra_context if extra_context else last_user_query
 
     try:
-        # التنسيق السليم 100% للـ SDK الجديد لتقبل النص والصورة معاً دون أخطاء Pydantic
-        if st.session_state.current_file_bytes and st.session_state.current_file_mime:
+        # التحقق مما إذا كانت هناك صورة جديدة مرفقة لهذه الرسالة فقط
+        if st.session_state.active_image:
             contents_payload = [
                 prompt_final,
                 {
                     "inline_data": {
-                        "mime_type": st.session_state.current_file_mime,
-                        "data": st.session_state.current_file_bytes
+                        "mime_type": st.session_state.active_image["mime"],
+                        "data": st.session_state.active_image["bytes"]
                     }
                 }
             ]
+            # تفريغ الصورة فوراً بعد إرسالها لكي لا تتكرر في السؤال القادم
+            st.session_state.active_image = None
         else:
             contents_payload = prompt_final
 
@@ -341,11 +351,6 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                 full_res += chunk.text
 
         st.session_state.messages.append({"role": "assistant", "content": full_res})
-        
-        # تفريغ الملف المؤقت
-        st.session_state.current_file_bytes = None
-        st.session_state.current_file_mime = None
-        
         st.rerun()
     except Exception as e:
         st.error(f"حدث خطأ: {e}")
