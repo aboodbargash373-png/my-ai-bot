@@ -199,7 +199,7 @@ def get_gemini_client():
 
 client = get_gemini_client()
 
-SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِي لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية. جاوب بلغة المستخدم الي سالك فيها."
+SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِي لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية.,جاوب بلغت المستخدم الي سالك فيها"
 
 # 6. الدوال الخاصة بالسيستم (RAG والطلبات)
 def check_order_status(order_id: str) -> str:
@@ -221,7 +221,7 @@ def search_company_rag(query: str) -> str:
     knowledge_base = [
         "سياسة الإرجاع: يمكن إرجاع أي منتج خلال 14 يوم من تاريخ الشراء بشرط أن يكون بحالته الأصلية.",
         "أوقات العمل: دعم عملاء رداد يعمل على مدار الساعة 24/7 طوال أيام الأسبوع.",
-        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلام."
+        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلاستلام."
     ]
     for doc in knowledge_base:
         if any(w in query.lower() for w in doc.lower().split() if len(w) > 3):
@@ -258,7 +258,6 @@ for msg in st.session_state.messages:
 uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
 user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
-# استخدام مفتاح لمعالجة المدخلات مرة واحدة فقط وعدم تكرارها عند الـ rerun
 if "processed_input" not in st.session_state:
     st.session_state.processed_input = None
 
@@ -274,11 +273,10 @@ if (user_input or uploaded_file) and st.session_state.processed_input != current
     st.session_state.processed_input = current_input_signature
     st.rerun()
 
-# تفريغ التوقيع إذا تم مسح الحقول ليتمكن المستخدم من الإرسال لاحقاً
 if not user_input and not uploaded_file:
     st.session_state.processed_input = None
 
-# 9. توليد الرد من Gemini فقط عندما تكون آخر رسالة مرسلة هي من "المستخدم" ولم يتم الرد عليها بعد
+# 9. توليد الرد من Gemini (مع اعتماد موديل gemini-3.6-flash الخاص بك حصرياً)
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     last_user_query = st.session_state.messages[-1]["content"]
     
@@ -302,7 +300,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
 
     try:
         res_stream = client.models.generate_content_stream(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt_final,
             config={"system_instruction": SYSTEM_INSTRUCTION}
         )
