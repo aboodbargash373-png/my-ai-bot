@@ -69,7 +69,7 @@ for idx, t_key in enumerate(theme_keys):
         """
         st.markdown(card_code, unsafe_allow_html=True)
 
-# 4. حقن الـ CSS الشامل وتعديل مساحة النص لكي لا يختفي تحت زر (+)
+# 4. حقن الـ CSS الشامل وتوسيع مساحة النص لعدم اختفائه تحت زر (+)
 st.markdown(f"""
 <style>
     .stApp {{
@@ -139,9 +139,11 @@ st.markdown(f"""
         z-index: 999;
     }}
 
-    /* إعطاء مساحة داخل صندوق الكتابة من جهة اليسار لكي لا يختفي النص تحت زر الزائد */
-    div[data-testid="stChatInput"] input {{
-        padding-left: 55px !important;
+    /* حل نهائي لمشكلة إخفاء النص تحت زر الزائد */
+    div[data-testid="stChatInput"] input, 
+    div[data-testid="stChatInput"] textarea {{
+        padding-left: 75px !important;
+        direction: rtl !important;
     }}
 
     div[data-testid="stFileUploader"] {{
@@ -156,9 +158,9 @@ st.markdown(f"""
         div[data-testid="stFileUploader"] {{
             left: 15px !important;
         }}
-        /* تعديل إضافي للموبايل لضمان عدم تداخل النص مع الزر */
-        div[data-testid="stChatInput"] input {{
-            padding-left: 50px !important;
+        div[data-testid="stChatInput"] input, 
+        div[data-testid="stChatInput"] textarea {{
+            padding-left: 70px !important;
         }}
     }}
     
@@ -237,11 +239,12 @@ def search_company_rag(query: str) -> str:
             return doc
     return ""
 
-# تهيئة الذاكرة وحفظ الصورة الحالية فقط للرسالة الحالية
+# تهيئة الذاكرة
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "مرحباً بك! ⚡ أنا **RADDAD**. كيف أستطيع مساعدتك اليوم؟"}]
-if "active_image" not in st.session_state:
-    st.session_state.active_image = None
+
+if "pending_image" not in st.session_state:
+    st.session_state.pending_image = None
 
 # عرض العنوان الرئيسي
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
@@ -269,6 +272,13 @@ for msg in st.session_state.messages:
 uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
 user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
+if uploaded_file is not None:
+    st.session_state.pending_image = {
+        "bytes": uploaded_file.getvalue(),
+        "mime": uploaded_file.type,
+        "name": uploaded_file.name
+    }
+
 if "processed_input" not in st.session_state:
     st.session_state.processed_input = None
 
@@ -281,15 +291,6 @@ if (user_input or uploaded_file) and st.session_state.processed_input != current
         final_query = f"📷 [صورة مرفقة: {uploaded_file.name}]"
     else:
         final_query = ""
-    
-    # تخزين بايتات الصورة الحالية بشكل مؤقت لهذه الرسالة فقط
-    if uploaded_file is not None:
-        st.session_state.active_image = {
-            "bytes": uploaded_file.getvalue(),
-            "mime": uploaded_file.type
-        }
-    else:
-        st.session_state.active_image = None
 
     if final_query:
         st.session_state.messages.append({"role": "user", "content": final_query})
@@ -300,7 +301,7 @@ if (user_input or uploaded_file) and st.session_state.processed_input != current
 if not user_input and not uploaded_file:
     st.session_state.processed_input = None
 
-# 9. توليد الرد من Gemini (مع إرسال الصورة مرة واحدة فقط عند رفعها، وعدم تكرارها في الأسئلة اللاحقة)
+# 9. توليد الرد من Gemini (مع موديل gemini-3.6-flash وإرسال الصورة المعلقة مرة واحدة فقط)
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     last_user_query = st.session_state.messages[-1]["content"]
     
@@ -323,21 +324,20 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     prompt_final = last_user_query + extra_context if extra_context else last_user_query
 
     try:
-        # التحقق مما إذا كانت هناك صورة جديدة مرفقة لهذه الرسالة فقط
-        if st.session_state.active_image:
+        if st.session_state.pending_image and ("📷 [صورة مرفقة:" in last_user_query or uploaded_file):
             contents_payload = [
                 prompt_final,
                 {
                     "inline_data": {
-                        "mime_type": st.session_state.active_image["mime"],
-                        "data": st.session_state.active_image["bytes"]
+                        "mime_type": st.session_state.pending_image["mime"],
+                        "data": st.session_state.pending_image["bytes"]
                     }
                 }
             ]
-            # تفريغ الصورة فوراً بعد إرسالها لكي لا تتكرر في السؤال القادم
-            st.session_state.active_image = None
+            st.session_state.pending_image = None
         else:
             contents_payload = prompt_final
+            st.session_state.pending_image = None
 
         res_stream = client.models.generate_content_stream(
             model="gemini-3.6-flash",
