@@ -254,7 +254,7 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 8. واجهة الإدخال ورفع الملفات مع الاحتفاظ بالملف وإرساله صامتاً بدون نصوص مزعجة
+# 8. واجهة الإدخال ورفع الملفات
 uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
 user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
@@ -268,8 +268,13 @@ if "current_file_mime" not in st.session_state:
 current_input_signature = f"{user_input}_{uploaded_file.name if uploaded_file else 'nofile'}"
 
 if (user_input or uploaded_file) and st.session_state.processed_input != current_input_signature:
-    # استخدام النص الذي كتبه المستخدم فقط، وإن لم يكتب نصاً يتم إرسال استعلام افتراضي خالي من جمل الإزعاج
-    final_query = user_input if user_input else "يرجى الاطلاع على هذا المرفق والمساعدة بشأنه."
+    # إذا كتب المستخدم نصاً يظهر نصه، وإذا رفع صورة لوحدها تظهر رسالة نظيفة تدل على إرفاق صورة بدون كلام مصطنع
+    if user_input:
+        final_query = user_input
+    elif uploaded_file:
+        final_query = f"📷 [صورة مرفقة: {uploaded_file.name}]"
+    else:
+        final_query = ""
     
     if uploaded_file is not None:
         st.session_state.current_file_bytes = uploaded_file.getvalue()
@@ -278,14 +283,16 @@ if (user_input or uploaded_file) and st.session_state.processed_input != current
         st.session_state.current_file_bytes = None
         st.session_state.current_file_mime = None
 
-    st.session_state.messages.append({"role": "user", "content": final_query})
+    if final_query:
+        st.session_state.messages.append({"role": "user", "content": final_query})
+    
     st.session_state.processed_input = current_input_signature
     st.rerun()
 
 if not user_input and not uploaded_file:
     st.session_state.processed_input = None
 
-# 9. توليد الرد من Gemini مع تمرير الملف للنموذج (موديل gemini-3.6-flash)
+# 9. توليد الرد من Gemini (موديل gemini-3.6-flash مع التنسيق الصحيح للـ SDK الجديد)
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     last_user_query = st.session_state.messages[-1]["content"]
     
@@ -308,12 +315,19 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     prompt_final = last_user_query + extra_context if extra_context else last_user_query
 
     try:
-        contents_payload = [prompt_final]
+        # التنسيق السليم 100% للـ SDK الجديد لتقبل النص والصورة معاً دون أخطاء Pydantic
         if st.session_state.current_file_bytes and st.session_state.current_file_mime:
-            contents_payload.append({
-                "mime_type": st.session_state.current_file_mime,
-                "data": st.session_state.current_file_bytes
-            })
+            contents_payload = [
+                prompt_final,
+                {
+                    "inline_data": {
+                        "mime_type": st.session_state.current_file_mime,
+                        "data": st.session_state.current_file_bytes
+                    }
+                }
+            ]
+        else:
+            contents_payload = prompt_final
 
         res_stream = client.models.generate_content_stream(
             model="gemini-3.6-flash",
@@ -328,7 +342,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
 
         st.session_state.messages.append({"role": "assistant", "content": full_res})
         
-        # تفريغ المرفق المؤقت
+        # تفريغ الملف المؤقت
         st.session_state.current_file_bytes = None
         st.session_state.current_file_mime = None
         
