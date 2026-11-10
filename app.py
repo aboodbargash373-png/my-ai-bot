@@ -69,7 +69,7 @@ for idx, t_key in enumerate(theme_keys):
         """
         st.markdown(card_code, unsafe_allow_html=True)
 
-# 4. حقن الـ CSS الشامل وتوسيع مساحة النص لعدم اختفائه تحت زر (+)
+# 4. حقن الـ CSS الشامل وتوسيع مساحة النص لمنع اختفائه تحت زر (+) نهائياً
 st.markdown(f"""
 <style>
     .stApp {{
@@ -139,11 +139,13 @@ st.markdown(f"""
         z-index: 999;
     }}
 
-    /* حل نهائي لمشكلة إخفاء النص تحت زر الزائد */
+    /* إزاحة دقيقة للنص لليسار لمنع تداخله مع زر الزائد */
     div[data-testid="stChatInput"] input, 
     div[data-testid="stChatInput"] textarea {{
-        padding-left: 75px !important;
+        padding-left: 65px !important;
+        padding-right: 20px !important;
         direction: rtl !important;
+        text-align: right !important;
     }}
 
     div[data-testid="stFileUploader"] {{
@@ -160,7 +162,7 @@ st.markdown(f"""
         }}
         div[data-testid="stChatInput"] input, 
         div[data-testid="stChatInput"] textarea {{
-            padding-left: 70px !important;
+            padding-left: 60px !important;
         }}
     }}
     
@@ -301,7 +303,7 @@ if (user_input or uploaded_file) and st.session_state.processed_input != current
 if not user_input and not uploaded_file:
     st.session_state.processed_input = None
 
-# 9. توليد الرد من Gemini (مع موديل gemini-3.6-flash وإرسال الصورة المعلقة مرة واحدة فقط)
+# 9. توليد الرد من Gemini مع إخفاء الأخطاء التقنية واستبدالها بنص مريح وراقي
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     last_user_query = st.session_state.messages[-1]["content"]
     
@@ -352,5 +354,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
 
         st.session_state.messages.append({"role": "assistant", "content": full_res})
         st.rerun()
-    except Exception as e:
-        st.error(f"حدث خطأ: {e}")
+    except Exception:
+        # إخفاء أي خطأ تقني تماماً وإظهار رد راقي ومريح للزبون بلسان رداد
+        friendly_error_message = "أهلاً بك. أواجه ضغطاً مؤقتاً في الخدمة في هذه اللحظة، يرجى المحاولة بعد ثوانٍ قليلة، ويسعدني دائماً خدمتك ومساعدتك!"
+        st.session_state.messages.append({"role": "assistant", "content": friendly_error_message})
+        st.rerun()
