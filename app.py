@@ -4,7 +4,7 @@ from google import genai
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="Raddad Cyber AI", page_icon="⚡", layout="centered")
 
-# 2. درجات ألوان الثيمات (الثيم السماوي صار بألوان سماوية زاهية وفاتحة للتطبيق بالكامل)
+# 2. درجات ألوان الثيمات
 THEMES = {
     "pistachio": {
         "accent": "#558b2f",
@@ -69,21 +69,18 @@ for idx, t_key in enumerate(theme_keys):
         """
         st.markdown(card_code, unsafe_allow_html=True)
 
-# 4. حقن الـ CSS الشامل لتطبيق الثيم السماوي على الواجهة بالكامل
+# 4. حقن الـ CSS الشامل لتطبيق الثيم على الواجهة بالكامل
 st.markdown(f"""
 <style>
-    /* خلفية التطبيق الشاملة */
     .stApp {{
         background: {active_theme['bg_gradient']};
         color: #ffffff;
     }}
     
-    /* الشريط الجانبي */
     [data-testid="stSidebar"] {{
         background-color: {active_theme['sidebar_bg']};
     }}
 
-    /* العنوان الرئيسي */
     .cyber-title {{
         font-size: 2.2rem;
         font-weight: bold;
@@ -93,7 +90,6 @@ st.markdown(f"""
         text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
     }}
 
-    /* حاويات المحادثة - يمين للمستخدم، يسار للبوت */
     .chat-row-user {{
         display: flex;
         justify-content: flex-end;
@@ -110,7 +106,6 @@ st.markdown(f"""
         direction: rtl;
     }}
 
-    /* فقاعات المحادثة */
     .chat-bubble {{
         max-width: 75%;
         padding: 12px 16px;
@@ -120,7 +115,6 @@ st.markdown(f"""
         word-wrap: break-word;
     }}
 
-    /* فقاعة المستخدم بلون الثيم المختار */
     .user-bubble {{
         background-color: {active_theme['user_bg']} !important;
         color: #ffffff !important;
@@ -128,7 +122,6 @@ st.markdown(f"""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }}
 
-    /* فقاعة البوت */
     .assistant-bubble {{
         background-color: #202c33 !important;
         color: #ffffff !important;
@@ -136,7 +129,6 @@ st.markdown(f"""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }}
 
-    /* تثبيت صندوق الكتابة في أسفل الشاشة تماماً */
     div[data-testid="stChatInput"] {{
         position: fixed !important;
         bottom: 15px !important;
@@ -147,7 +139,6 @@ st.markdown(f"""
         z-index: 999;
     }}
 
-    /* زر رفع الملفات (+) بجانب صندوق الكتابة بالأسفل مباشرة في منتصف الدائرة */
     div[data-testid="stFileUploader"] {{
         position: fixed !important;
         bottom: 23px !important;
@@ -181,7 +172,6 @@ st.markdown(f"""
         display: none !important;
     }}
     
-    /* علامة الزائد (+) متمركزة تماماً في منتصف الدائرة */
     div[data-testid="stFileUploader"] section::after {{
         content: "+";
         font-size: 20px;
@@ -209,7 +199,7 @@ def get_gemini_client():
 
 client = get_gemini_client()
 
-SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِي لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية.,جاوب بلغت المستخدم الي سالك فيها"
+SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِي لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية. جاوب بلغة المستخدم الي سالك فيها."
 
 # 6. الدوال الخاصة بالسيستم (RAG والطلبات)
 def check_order_status(order_id: str) -> str:
@@ -245,7 +235,7 @@ if "messages" not in st.session_state:
 # عرض العنوان الرئيسي
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
 
-# 7. عرض المحادثات بتنسيق الـ HTML المخصص (يمين للمستخدم ويسار للبوت)
+# 7. عرض المحادثات بتنسيق الـ HTML المخصص
 for msg in st.session_state.messages:
     if msg["role"] == "user":
         st.markdown(f"""
@@ -264,26 +254,23 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 8. واجهة الإدخال ورفع الملفات (+) المجاورة لصندوق الكتابة بالأسفل بدقة
+# 8. واجهة الإدخال ورفع الملفات (تم فصل الإرسال الفوري عن تحديد الملف لضمان عدم الإرسال التلقائي)
 uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
 user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
-# معالجة الإدخال
-final_query = ""
-if uploaded_file is not None:
-    file_info = f"[تم إرفاق ملف/صورة: {uploaded_file.name}]"
-    if user_input:
-        final_query = f"{user_input} {file_info}"
-    else:
-        final_query = f"مرحباً رداد، قمت بإرفاق هذا الملف/الصورة: {uploaded_file.name}"
-elif user_input:
-    final_query = user_input
-
-if final_query:
+# معالجة الإدخال عند الضغط فعلياً على زر الدردشة أو إدخال نص/ملف بارتباط صحيح
+if user_input or uploaded_file:
+    # نبني محتوى رسالة المستخدم بناءً على وجود نص أو ملف مرفق
+    file_part = f"\n[تم إرفاق ملف: {uploaded_file.name}]" if uploaded_file else ""
+    text_part = user_input if user_input else ("قمت بإرفاق هذا الملف للمراجعة." if uploaded_file else "")
+    
+    final_query = text_part + file_part
+    
+    # نضيف رسالة المستخدم للذاكرة مرة واحدة فقط
     st.session_state.messages.append({"role": "user", "content": final_query})
     st.rerun()
 
-# 9. توليد الرد من Gemini (مع الحفاظ على الموديل gemini-3.6-flash)
+# 9. توليد الرد من Gemini فقط عندما تكون آخر رسالة مرسلة هي من "المستخدم"
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     last_user_query = st.session_state.messages[-1]["content"]
     
@@ -307,7 +294,7 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
 
     try:
         res_stream = client.models.generate_content_stream(
-            model="gemini-3.6-flash",
+            model="gemini-2.5-flash",
             contents=prompt_final,
             config={"system_instruction": SYSTEM_INSTRUCTION}
         )
