@@ -199,7 +199,7 @@ def get_gemini_client():
 
 client = get_gemini_client()
 
-SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِي لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية.,جاوب بلغت المستخدم الي سالك فيها"
+SYSTEM_INSTRUCTION = "إذا لم تجد الجواب المناسب احكِي لا أعلم بأسلوب راقي ولا تؤلف نتائج من عندك، أنت 'رداد' مساعد خدمة عملاء ذكي وسريع جداً. أجب بإيجاز واحترافية باللغة العربية. جاوب بلغة المستخدم الي سالك فيها."
 
 # 6. الدوال الخاصة بالسيستم (RAG والطلبات)
 def check_order_status(order_id: str) -> str:
@@ -221,7 +221,7 @@ def search_company_rag(query: str) -> str:
     knowledge_base = [
         "سياسة الإرجاع: يمكن إرجاع أي منتج خلال 14 يوم من تاريخ الشراء بشرط أن يكون بحالته الأصلية.",
         "أوقات العمل: دعم عملاء رداد يعمل على مدار الساعة 24/7 طوال أيام الأسبوع.",
-        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلاستلام."
+        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلام."
     ]
     for doc in knowledge_base:
         if any(w in query.lower() for w in doc.lower().split() if len(w) > 3):
@@ -254,21 +254,30 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 8. واجهة الإدخال ورفع الملفات مع منع التكرار التلقائي نهائياً
+# 8. واجهة الإدخال ورفع الملفات مع الاحتفاظ بالملف وإرساله صامتاً بدون نصوص مزعجة
 uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
 user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
 if "processed_input" not in st.session_state:
     st.session_state.processed_input = None
+if "current_file_bytes" not in st.session_state:
+    st.session_state.current_file_bytes = None
+if "current_file_mime" not in st.session_state:
+    st.session_state.current_file_mime = None
 
 current_input_signature = f"{user_input}_{uploaded_file.name if uploaded_file else 'nofile'}"
 
 if (user_input or uploaded_file) and st.session_state.processed_input != current_input_signature:
-    file_part = f"\n[تم إرفاق ملف: {uploaded_file.name}]" if uploaded_file else ""
-    text_part = user_input if user_input else ("قمت بإرفاق هذا الملف للمراجعة." if uploaded_file else "")
+    # استخدام النص الذي كتبه المستخدم فقط، وإن لم يكتب نصاً يتم إرسال استعلام افتراضي خالي من جمل الإزعاج
+    final_query = user_input if user_input else "يرجى الاطلاع على هذا المرفق والمساعدة بشأنه."
     
-    final_query = text_part + file_part
-    
+    if uploaded_file is not None:
+        st.session_state.current_file_bytes = uploaded_file.getvalue()
+        st.session_state.current_file_mime = uploaded_file.type
+    else:
+        st.session_state.current_file_bytes = None
+        st.session_state.current_file_mime = None
+
     st.session_state.messages.append({"role": "user", "content": final_query})
     st.session_state.processed_input = current_input_signature
     st.rerun()
@@ -276,7 +285,7 @@ if (user_input or uploaded_file) and st.session_state.processed_input != current
 if not user_input and not uploaded_file:
     st.session_state.processed_input = None
 
-# 9. توليد الرد من Gemini (مع اعتماد موديل gemini-3.6-flash الخاص بك حصرياً)
+# 9. توليد الرد من Gemini مع تمرير الملف للنموذج (موديل gemini-3.6-flash)
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     last_user_query = st.session_state.messages[-1]["content"]
     
@@ -299,9 +308,16 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     prompt_final = last_user_query + extra_context if extra_context else last_user_query
 
     try:
+        contents_payload = [prompt_final]
+        if st.session_state.current_file_bytes and st.session_state.current_file_mime:
+            contents_payload.append({
+                "mime_type": st.session_state.current_file_mime,
+                "data": st.session_state.current_file_bytes
+            })
+
         res_stream = client.models.generate_content_stream(
             model="gemini-3.6-flash",
-            contents=prompt_final,
+            contents=contents_payload,
             config={"system_instruction": SYSTEM_INSTRUCTION}
         )
         
@@ -311,6 +327,11 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                 full_res += chunk.text
 
         st.session_state.messages.append({"role": "assistant", "content": full_res})
+        
+        # تفريغ المرفق المؤقت
+        st.session_state.current_file_bytes = None
+        st.session_state.current_file_mime = None
+        
         st.rerun()
     except Exception as e:
         st.error(f"حدث خطأ: {e}")
