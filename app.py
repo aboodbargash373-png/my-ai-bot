@@ -254,23 +254,31 @@ for msg in st.session_state.messages:
             </div>
         """, unsafe_allow_html=True)
 
-# 8. واجهة الإدخال ورفع الملفات (تم فصل الإرسال الفوري عن تحديد الملف لضمان عدم الإرسال التلقائي)
+# 8. واجهة الإدخال ورفع الملفات مع منع التكرار التلقائي نهائياً
 uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
 user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
-# معالجة الإدخال عند الضغط فعلياً على زر الدردشة أو إدخال نص/ملف بارتباط صحيح
-if user_input or uploaded_file:
-    # نبني محتوى رسالة المستخدم بناءً على وجود نص أو ملف مرفق
+# استخدام مفتاح لمعالجة المدخلات مرة واحدة فقط وعدم تكرارها عند الـ rerun
+if "processed_input" not in st.session_state:
+    st.session_state.processed_input = None
+
+current_input_signature = f"{user_input}_{uploaded_file.name if uploaded_file else 'nofile'}"
+
+if (user_input or uploaded_file) and st.session_state.processed_input != current_input_signature:
     file_part = f"\n[تم إرفاق ملف: {uploaded_file.name}]" if uploaded_file else ""
     text_part = user_input if user_input else ("قمت بإرفاق هذا الملف للمراجعة." if uploaded_file else "")
     
     final_query = text_part + file_part
     
-    # نضيف رسالة المستخدم للذاكرة مرة واحدة فقط
     st.session_state.messages.append({"role": "user", "content": final_query})
+    st.session_state.processed_input = current_input_signature
     st.rerun()
 
-# 9. توليد الرد من Gemini فقط عندما تكون آخر رسالة مرسلة هي من "المستخدم"
+# تفريغ التوقيع إذا تم مسح الحقول ليتمكن المستخدم من الإرسال لاحقاً
+if not user_input and not uploaded_file:
+    st.session_state.processed_input = None
+
+# 9. توليد الرد من Gemini فقط عندما تكون آخر رسالة مرسلة هي من "المستخدم" ولم يتم الرد عليها بعد
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     last_user_query = st.session_state.messages[-1]["content"]
     
