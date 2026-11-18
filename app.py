@@ -379,7 +379,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
 
         st.session_state.messages.append({"role": "assistant", "content": full_res})
         st.rerun()
-    except Exception:
+    except Exception as e:
+        print("GEMINI ERROR:", repr(e))  # بيطلع بالـ Logs بس، الزبون ما بشوفه
         # إخفاء أي خطأ تقني تماماً وإظهار رد راقي ومريح للزبون بلسان رداد
         friendly_error_message = "أهلاً بك. أواجه ضغطاً مؤقتاً في الخدمة في هذه اللحظة، يرجى المحاولة بعد ثوانٍ قليلة، ويسعدني دائماً خدمتك ومساعدتك!"
         st.session_state.messages.append({"role": "assistant", "content": friendly_error_message})
