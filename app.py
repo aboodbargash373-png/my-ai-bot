@@ -1,3 +1,4 @@
+import numpy as np
 import streamlit as st
 from google import genai
 
@@ -230,16 +231,42 @@ def check_developer_info(query: str) -> str:
         return "المطور الذي قام بتطوير رداد وصمم فكرته هو عبد الكريم (Abdulkareem)."
     return ""
 
-def search_company_rag(query: str) -> str:
-    knowledge_base = [
-        "سياسة الإرجاع: يمكن إرجاع أي منتج خلال 14 يوم من تاريخ الشراء بشرط أن يكون بحالته الأصلية.",
-        "أوقات العمل: دعم عملاء رداد يعمل على مدار الساعة 24/7 طوال أيام الأسبوع.",
-        "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلام."
-    ]
-    for doc in knowledge_base:
-        if any(w in query.lower() for w in doc.lower().split() if len(w) > 3):
-            return doc
-    return ""
+# ---------- RAG حقيقي: البحث بالمعنى باستخدام Embeddings ----------
+EMBED_MODEL = "gemini-embedding-001"
+
+KNOWLEDGE_BASE = [
+    "سياسة الإرجاع: يمكن إرجاع أي منتج خلال 14 يوم من تاريخ الشراء بشرط أن يكون بحالته الأصلية.",
+    "أوقات العمل: دعم عملاء رداد يعمل على مدار الساعة 24/7 طوال أيام الأسبوع.",
+    "طرق الدفع: ندعم الدفع الإلكتروني عبر البطاقات البنكية والدفع عند الاستلام."
+]
+
+def _normalize(v):
+    # نخلي طول كل متجه = 1 عشان المقارنة تعتمد على الاتجاه (المعنى) مش الطول
+    return v / np.linalg.norm(v, axis=-1, keepdims=True)
+
+@st.cache_resource
+def build_index():
+    # بيشتغل مرة وحدة بس: بيحوّل كل جملة بالدليل لمتجه أرقام
+    try:
+        res = client.models.embed_content(model=EMBED_MODEL, contents=KNOWLEDGE_BASE)
+        return _normalize(np.array([e.values for e in res.embeddings]))
+    except Exception:
+        return None
+
+DOC_VECS = build_index()
+
+def search_company_rag(query: str, top_k: int = 2, min_score: float = 0.6) -> str:
+    if DOC_VECS is None:
+        return ""
+    try:
+        res = client.models.embed_content(model=EMBED_MODEL, contents=query)
+        q_vec = _normalize(np.array(res.embeddings[0].values))
+        scores = DOC_VECS @ q_vec                      # تشابه السؤال مع كل جملة
+        best = np.argsort(scores)[::-1][:top_k]        # أعلى النتائج
+        hits = [KNOWLEDGE_BASE[i] for i in best if scores[i] >= min_score]
+        return "\n".join(hits)
+    except Exception:
+        return ""
 
 # تهيئة الذاكرة (المحادثة فاضية، الترحيب مش رسالة)
 if "messages" not in st.session_state:
