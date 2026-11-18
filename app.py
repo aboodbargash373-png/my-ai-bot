@@ -53,7 +53,7 @@ for idx, t_key in enumerate(theme_keys):
         is_selected = st.session_state.selected_theme_key == t_key
         border_style = "3px solid #ffffff" if is_selected else "1px solid rgba(255,255,255,0.2)"
         box_shadow = "0 0 15px rgba(255,255,255,0.5)" if is_selected else "0 4px 10px rgba(0,0,0,0.4)"
-        
+
         card_code = f"""
             <a href="?theme={t_key}" target="_self" style="text-decoration: none;">
                 <div style="
@@ -76,7 +76,7 @@ st.markdown(f"""
         background: {active_theme['bg_gradient']};
         color: #ffffff;
     }}
-    
+
     [data-testid="stSidebar"] {{
         background-color: {active_theme['sidebar_bg']};
     }}
@@ -155,7 +155,7 @@ st.markdown(f"""
         z-index: 99999 !important;
         width: 40px !important;
     }}
-    
+
     @media (max-width: 768px) {{
         div[data-testid="stFileUploader"] {{
             left: 15px !important;
@@ -165,7 +165,7 @@ st.markdown(f"""
             padding-left: 60px !important;
         }}
     }}
-    
+
     div[data-testid="stFileUploader"] section {{
         padding: 0px !important;
         border-radius: 50% !important;
@@ -180,11 +180,11 @@ st.markdown(f"""
         cursor: pointer;
         box-shadow: 0 2px 6px rgba(0,0,0,0.4);
     }}
-    
+
     div[data-testid="stFileUploader"] section span {{
         display: none !important;
     }}
-    
+
     div[data-testid="stFileUploader"] section::after {{
         content: "+";
         font-size: 20px;
@@ -241,23 +241,35 @@ def search_company_rag(query: str) -> str:
             return doc
     return ""
 
-# تهيئة الذاكرة
+# تهيئة الذاكرة (المحادثة فاضية، الترحيب مش رسالة)
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "مرحباً بك! ⚡ أنا **RADDAD**. كيف أستطيع مساعدتك اليوم؟"}]
+    st.session_state.messages = []
 
-if "pending_image" not in st.session_state:
-    st.session_state.pending_image = None
+# عدّاد لتفريغ زر الرفع بعد كل إرسال
+if "uploader_key" not in st.session_state:
+    st.session_state.uploader_key = 0
 
 # عرض العنوان الرئيسي
 st.markdown("<h1 class='cyber-title'>RADDAD CYBER AI</h1>", unsafe_allow_html=True)
 
+# رسالة الترحيب بمنتصف الصفحة (بتختفي أول ما تبدأ المحادثة)
+if not st.session_state.messages:
+    st.markdown(
+        "<div style='text-align:center; margin-top:60px; opacity:0.85;'>"
+        "<div style='font-size:1.3rem;'>⚡ Raddad مساعدك الذكي</div>"
+        "<div style='font-size:0.95rem; margin-top:6px;'>اكتب سؤالك أو رقم الطلب</div>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
 # 7. عرض المحادثات بتنسيق الـ HTML المخصص
 for msg in st.session_state.messages:
     if msg["role"] == "user":
+        attach = f"<br>📎 {msg['image_name']}" if msg.get("image_name") else ""
         st.markdown(f"""
             <div class="chat-row-user">
                 <div class="chat-bubble user-bubble">
-                    {msg["content"]}
+                    {msg["content"]}{attach}
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -271,48 +283,36 @@ for msg in st.session_state.messages:
         """, unsafe_allow_html=True)
 
 # 8. واجهة الإدخال ورفع الملفات
-uploaded_file = st.file_uploader("", type=None, label_visibility="collapsed", key="file_plus_input")
+uploaded_file = st.file_uploader(
+    "", type=None, label_visibility="collapsed",
+    key=f"file_{st.session_state.uploader_key}"
+)
 user_input = st.chat_input("اكتب استفسارك أو رقم الطلب (مثل ORD-101)...")
 
-if uploaded_file is not None:
-    st.session_state.pending_image = {
-        "bytes": uploaded_file.getvalue(),
-        "mime": uploaded_file.type,
-        "name": uploaded_file.name
-    }
-
-if "processed_input" not in st.session_state:
-    st.session_state.processed_input = None
-
-current_input_signature = f"{user_input}_{uploaded_file.name if uploaded_file else 'nofile'}"
-
-if (user_input or uploaded_file) and st.session_state.processed_input != current_input_signature:
-    if user_input:
-        final_query = user_input
-    elif uploaded_file:
-        final_query = f"📷 [صورة مرفقة: {uploaded_file.name}]"
-    else:
-        final_query = ""
-
-    if final_query:
-        st.session_state.messages.append({"role": "user", "content": final_query})
-    
-    st.session_state.processed_input = current_input_signature
+# الرسالة بتنضاف بس لما تكبس إرسال (يعني لما يكون في نص)
+if user_input:
+    new_msg = {"role": "user", "content": user_input}
+    if uploaded_file is not None:
+        new_msg["image_name"] = uploaded_file.name
+        new_msg["image"] = {
+            "bytes": uploaded_file.getvalue(),
+            "mime": uploaded_file.type
+        }
+        st.session_state.uploader_key += 1  # يفضّي زر الرفع بعد الإرسال
+    st.session_state.messages.append(new_msg)
     st.rerun()
-
-if not user_input and not uploaded_file:
-    st.session_state.processed_input = None
 
 # 9. توليد الرد من Gemini مع إخفاء الأخطاء التقنية واستبدالها بنص مريح وراقي
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
-    last_user_query = st.session_state.messages[-1]["content"]
-    
+    last_msg = st.session_state.messages[-1]
+    last_user_query = last_msg["content"]
+
     extra_context = ""
     for code in ["ORD-101", "ORD-202", "ORD-303"]:
         if code in last_user_query.upper():
             extra_context = f"\n[نتيجة نظام الطلبات: {check_order_status(code)}]"
             break
-    
+
     if not extra_context:
         dev_res = check_developer_info(last_user_query)
         if dev_res:
@@ -326,27 +326,25 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
     prompt_final = last_user_query + extra_context if extra_context else last_user_query
 
     try:
-        if st.session_state.pending_image and ("📷 [صورة مرفقة:" in last_user_query or uploaded_file):
+        if last_msg.get("image"):
             contents_payload = [
                 prompt_final,
                 {
                     "inline_data": {
-                        "mime_type": st.session_state.pending_image["mime"],
-                        "data": st.session_state.pending_image["bytes"]
+                        "mime_type": last_msg["image"]["mime"],
+                        "data": last_msg["image"]["bytes"]
                     }
                 }
             ]
-            st.session_state.pending_image = None
         else:
             contents_payload = prompt_final
-            st.session_state.pending_image = None
 
         res_stream = client.models.generate_content_stream(
             model="gemini-3.6-flash",
             contents=contents_payload,
             config={"system_instruction": SYSTEM_INSTRUCTION}
         )
-        
+
         full_res = ""
         for chunk in res_stream:
             if chunk.text:
